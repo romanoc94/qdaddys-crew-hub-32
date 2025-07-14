@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Qdaddy's BBQ Design System - Rustic BBQ Restaurant Theme */
+
+@layer base {
+  :root {
+    /* BBQ Brand Colors - Red, Black, White Theme */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    /* Qdaddy's Red Primary */
+    --primary: 0 84% 45%;
+    --primary-foreground: 0 0% 98%;
+    --primary-glow: 0 70% 55%;
+
+    /* Warm Secondary */
+    --secondary: 25 95% 53%;
+    --secondary-foreground: 0 0% 9%;
+
+    /* Smoky Muted */
+    --muted: 20 14% 91%;
+    --muted-foreground: 0 0% 45%;
+
+    /* BBQ Accent */
+    --accent: 39 100% 50%;
+    --accent-foreground: 0 0% 9%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 20 5.9% 90%;
+    --input: 20 5.9% 90%;
+    --ring: 0 84% 45%;
+
+    --radius: 0.75rem;
+
+    /* BBQ Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-smoke: linear-gradient(180deg, hsl(var(--background)), hsl(20 14% 95%));
+    --gradient-fire: linear-gradient(45deg, hsl(var(--primary)), hsl(var(--accent)));
+
+    /* BBQ Shadows */
+    --shadow-bbq: 0 10px 30px -10px hsl(var(--primary) / 0.2);
+    --shadow-smoke: 0 4px 20px -4px hsl(20 14% 91% / 0.8);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+
+  /* BBQ Typography */
+  .font-bbq {
+    font-family: 'Fredoka', 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  /* BBQ Component Variants */
+  .btn-bbq {
+    @apply bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-bbq hover:shadow-lg transform hover:scale-105 transition-all duration-300;
+  }
+
+  .card-bbq {
+    @apply bg-card border border-border rounded-lg shadow-smoke hover:shadow-bbq transition-shadow duration-300;
+  }
+
+  .smoke-effect {
+    @apply bg-gradient-to-b from-background to-muted/30;
+  }
+
+  /* BBQ Status Indicators */
+  .status-cooking {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .status-ready {
+    @apply bg-green-500 text-white;
+  }
+
+  .status-needs-attention {
+    @apply bg-destructive text-destructive-foreground;
+  }
+}
