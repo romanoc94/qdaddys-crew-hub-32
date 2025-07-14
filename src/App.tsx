@@ -8,6 +8,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./components/Dashboard";
 import TeamPage from "./components/TeamPage";
 import ShiftsPage from "./components/ShiftsPage";
+import ChecklistsPage from "./components/ChecklistsPage";
 import AuthPage from "./components/auth/AuthPage";
 import NotFound from "./pages/NotFound";
 
@@ -26,7 +27,7 @@ const App = () => (
               <Route index element={<Dashboard />} />
               <Route path="team" element={<TeamPage />} />
               <Route path="shifts" element={<ShiftsPage />} />
-              <Route path="checklists" element={<div className="p-6"><h1 className="text-2xl font-bold">Checklists - Coming Soon</h1></div>} />
+              <Route path="checklists" element={<ChecklistsPage />} />
               <Route path="qcash" element={<div className="p-6"><h1 className="text-2xl font-bold">Q-Cash - Coming Soon</h1></div>} />
               <Route path="profiles" element={<div className="p-6"><h1 className="text-2xl font-bold">Profiles - Coming Soon</h1></div>} />
               <Route path="settings" element={<div className="p-6"><h1 className="text-2xl font-bold">Settings - Coming Soon</h1></div>} />
