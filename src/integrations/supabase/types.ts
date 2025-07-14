@@ -556,7 +556,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      belongs_to_store: {
+        Args: { target_store_id: string }
+        Returns: boolean
+      }
+      can_manage_profiles_in_store: {
+        Args: { target_store_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
