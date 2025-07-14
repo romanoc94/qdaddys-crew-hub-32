@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, Navigate } from "react-router-dom";
 import { 
   Users, 
   Calendar, 
@@ -10,9 +10,11 @@ import {
   Menu,
   X,
   Flame,
-  ChefHat
+  ChefHat,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
@@ -27,6 +29,19 @@ const navigation = [
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { user, profile, store, loading, signOut } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user && !profile) {
+    return <Navigate to="/auth" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-smoke">
@@ -70,7 +85,7 @@ export default function Layout() {
             </Button>
             <div className="flex items-center gap-2">
               <ChefHat className="h-6 w-6 text-primary" />
-              <span className="font-bbq font-semibold text-lg">Qdaddy's Crew</span>
+              <span className="font-bbq font-semibold text-lg">{store?.name || "Qdaddy's Crew"}</span>
             </div>
           </div>
         </div>
@@ -85,6 +100,7 @@ export default function Layout() {
 
 function SidebarContent() {
   const location = useLocation();
+  const { profile, store, signOut } = useAuth();
 
   return (
     <div className="flex h-full flex-col">
@@ -96,7 +112,7 @@ function SidebarContent() {
           </div>
           <div>
             <h1 className="font-bbq font-bold text-lg text-foreground">Qdaddy's Crew</h1>
-            <p className="text-xs text-muted-foreground">BBQ Team Management</p>
+            <p className="text-xs text-muted-foreground">{store?.name || "BBQ Team Management"}</p>
           </div>
         </div>
       </div>
@@ -126,14 +142,30 @@ function SidebarContent() {
 
       {/* User info */}
       <div className="border-t border-border p-4">
-        <div className="flex items-center">
-          <div className="flex items-center justify-center w-8 h-8 bg-secondary rounded-full">
-            <span className="text-sm font-medium text-secondary-foreground">JD</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="flex items-center justify-center w-8 h-8 bg-secondary rounded-full">
+              <span className="text-sm font-medium text-secondary-foreground">
+                {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+              </span>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-foreground">
+                {profile?.first_name} {profile?.last_name}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {profile?.role?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </p>
+            </div>
           </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-foreground">John Doe</p>
-            <p className="text-xs text-muted-foreground">Shift Leader</p>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={signOut}
+            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>

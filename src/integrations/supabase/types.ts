@@ -14,7 +14,98 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          employee_id: string | null
+          first_name: string | null
+          id: string
+          is_active: boolean
+          last_name: string | null
+          permissions: string[] | null
+          phone: string | null
+          pin: string | null
+          role: string
+          store_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id?: string | null
+          first_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_name?: string | null
+          permissions?: string[] | null
+          phone?: string | null
+          pin?: string | null
+          role?: string
+          store_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string | null
+          first_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_name?: string | null
+          permissions?: string[] | null
+          phone?: string | null
+          pin?: string | null
+          role?: string
+          store_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          location: string
+          name: string
+          phone: string | null
+          toast_pos_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location: string
+          name: string
+          phone?: string | null
+          toast_pos_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location?: string
+          name?: string
+          phone?: string | null
+          toast_pos_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
