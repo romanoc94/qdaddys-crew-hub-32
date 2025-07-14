@@ -37,8 +37,7 @@ const AuthPage = () => {
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    storeId: '',
-    role: 'team_member',
+    storeName: '',
   });
 
   // PIN form state
@@ -106,10 +105,9 @@ const AuthPage = () => {
       const { error } = await signUp(
         signUpData.email,
         signUpData.password,
-        signUpData.storeId,
         signUpData.firstName,
         signUpData.lastName,
-        signUpData.role
+        signUpData.storeName
       );
       if (error) throw error;
       
@@ -301,39 +299,15 @@ const AuthPage = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signup-store">Store Location</Label>
-                      <Select
-                        value={signUpData.storeId}
-                        onValueChange={(value) => setSignUpData({ ...signUpData, storeId: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your store" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {stores.map((store) => (
-                            <SelectItem key={store.id} value={store.id}>
-                              {store.name} - {store.location}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-role">Role</Label>
-                      <Select
-                        value={signUpData.role}
-                        onValueChange={(value) => setSignUpData({ ...signUpData, role: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="team_member">Team Member</SelectItem>
-                          <SelectItem value="shift_leader">Shift Leader</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="signup-store">Restaurant Name</Label>
+                      <Input
+                        id="signup-store"
+                        placeholder="Your BBQ Restaurant"
+                        value={signUpData.storeName}
+                        onChange={(e) => setSignUpData({ ...signUpData, storeName: e.target.value })}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">This will create a new restaurant location for you to manage</p>
                     </div>
 
                     <div className="space-y-2">
@@ -367,7 +341,7 @@ const AuthPage = () => {
                     <Button
                       type="submit"
                       className="w-full btn-bbq"
-                      disabled={isLoading || !signUpData.storeId}
+                      disabled={isLoading || !signUpData.storeName.trim()}
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                       Create Account

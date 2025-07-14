@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   Search, 
@@ -16,6 +17,7 @@ import {
   Filter
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AccountManagement from "./team/AccountManagement";
 
 interface TeamMember {
   id: string;
@@ -48,74 +50,74 @@ export default function TeamPage() {
     {
       id: "2", 
       name: "Sarah Wilson",
-      role: "Shift Leader",
+      role: "Kitchen Manager",
       status: "active",
       qCash: 380,
       rating: 4.9,
       shiftHours: 7.0,
-      certifications: ["Team Leadership", "Customer Service", "Catering Coord"]
+      certifications: ["Food Safety", "Kitchen Management", "Cost Control"]
     },
     {
       id: "3",
-      name: "David Kim", 
+      name: "Carlos Martinez",
       role: "Prep Cook",
       status: "break",
-      qCash: 220,
-      rating: 4.6,
+      qCash: 180,
+      rating: 4.3,
       shiftHours: 4.5,
-      certifications: ["Food Safety", "Sauce Prep"]
+      certifications: ["Food Safety", "Knife Skills"]
     },
     {
       id: "4",
-      name: "Jessica Chen",
-      role: "Cashier",
+      name: "Emma Thompson",
+      role: "Server",
       status: "active", 
-      qCash: 310,
+      qCash: 220,
       rating: 4.7,
       shiftHours: 5.5,
-      certifications: ["POS Systems", "Customer Service", "Order Accuracy"]
+      certifications: ["Customer Service", "POS Systems"]
     },
     {
       id: "5",
-      name: "Marcus Johnson",
-      role: "Catering Lead",
+      name: "Jake Foster",
+      role: "Line Cook",
       status: "off-duty",
-      qCash: 450,
-      rating: 4.9,
+      qCash: 150,
+      rating: 4.1,
       shiftHours: 0,
-      certifications: ["Event Planning", "Large Orders", "Transport Safety"]
+      certifications: ["Food Safety"]
     },
     {
       id: "6",
-      name: "Emma Davis",
-      role: "Line Cook",
+      name: "Lisa Chen",
+      role: "Shift Supervisor",
       status: "active",
-      qCash: 180,
-      rating: 4.4,
-      shiftHours: 3.0,
-      certifications: ["Food Safety", "Grill Operations"]
+      qCash: 300,
+      rating: 4.6,
+      shiftHours: 6.0,
+      certifications: ["Leadership", "Food Safety", "Inventory Management"]
     }
   ];
 
   const filteredMembers = teamMembers.filter(member => {
     const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.role.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === "all" || member.role.toLowerCase().includes(filterRole.toLowerCase());
+    const matchesRole = filterRole === "all" || member.role === filterRole;
     const matchesStatus = filterStatus === "all" || member.status === filterStatus;
     
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): string => {
     switch (status) {
       case 'active': return 'bg-green-500';
-      case 'break': return 'bg-accent';
-      case 'off-duty': return 'bg-muted-foreground';
-      default: return 'bg-muted-foreground';
+      case 'break': return 'bg-yellow-500'; 
+      case 'off-duty': return 'bg-gray-500';
+      default: return 'bg-gray-500';
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: string): string => {
     switch (status) {
       case 'active': return 'On Shift';
       case 'break': return 'On Break';
@@ -124,206 +126,232 @@ export default function TeamPage() {
     }
   };
 
+  const totalStaff = teamMembers.length;
+  const onShiftStaff = teamMembers.filter(m => m.status === 'active').length;
+  const totalQCash = teamMembers.reduce((sum, m) => sum + m.qCash, 0);
+  const avgRating = teamMembers.reduce((sum, m) => sum + m.rating, 0) / teamMembers.length;
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bbq font-bold text-foreground">Team Management</h1>
-          <p className="text-muted-foreground mt-1">Manage your BBQ crew and track performance</p>
+          <h1 className="text-3xl font-bold bg-gradient-fire bg-clip-text text-transparent">
+            Team Management
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage your BBQ crew and track performance
+          </p>
         </div>
-        <Button className="mt-4 sm:mt-0 btn-bbq gap-2">
-          <UserPlus className="h-4 w-4" />
+        <Button className="btn-bbq">
+          <UserPlus className="w-4 h-4 mr-2" />
           Add Team Member
         </Button>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="card-bbq">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-8 w-8 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">{teamMembers.length}</p>
-                <p className="text-xs text-muted-foreground">Total Staff</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Team Overview</TabsTrigger>
+          <TabsTrigger value="management">Account Management</TabsTrigger>
+        </TabsList>
 
-        <Card className="card-bbq">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-8 w-8 text-green-600" />
-              <div>
-                <p className="text-2xl font-bold">{teamMembers.filter(m => m.status === 'active').length}</p>
-                <p className="text-xs text-muted-foreground">On Shift</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="overview" className="space-y-6">
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Staff</p>
+                    <p className="text-2xl font-bold">{totalStaff}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="card-bbq">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Flame className="h-8 w-8 text-accent" />
-              <div>
-                <p className="text-2xl font-bold">{teamMembers.reduce((sum, m) => sum + m.qCash, 0)}</p>
-                <p className="text-xs text-muted-foreground">Total Q-Cash</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <Card className="bg-gradient-to-br from-card to-card/50 border-green-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">On Shift</p>
+                    <p className="text-2xl font-bold text-green-600">{onShiftStaff}</p>
+                  </div>
+                  <Clock className="h-8 w-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card className="card-bbq">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Star className="h-8 w-8 text-accent" />
-              <div>
-                <p className="text-2xl font-bold">{(teamMembers.reduce((sum, m) => sum + m.rating, 0) / teamMembers.length).toFixed(1)}</p>
-                <p className="text-xs text-muted-foreground">Avg Rating</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Card className="bg-gradient-to-br from-card to-card/50 border-orange-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Q-Cash</p>
+                    <p className="text-2xl font-bold text-orange-600">${totalQCash}</p>
+                  </div>
+                  <Flame className="h-8 w-8 text-orange-600" />
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Filters */}
-      <Card className="card-bbq">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search team members..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={filterRole} onValueChange={setFilterRole}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="pitmaster">Pitmaster</SelectItem>
-                <SelectItem value="leader">Shift Leader</SelectItem>
-                <SelectItem value="cook">Cook</SelectItem>
-                <SelectItem value="cashier">Cashier</SelectItem>
-                <SelectItem value="catering">Catering</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">On Shift</SelectItem>
-                <SelectItem value="break">On Break</SelectItem>
-                <SelectItem value="off-duty">Off Duty</SelectItem>
-              </SelectContent>
-            </Select>
+            <Card className="bg-gradient-to-br from-card to-card/50 border-yellow-500/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Avg Rating</p>
+                    <p className="text-2xl font-bold text-yellow-600">{avgRating.toFixed(1)}</p>
+                  </div>
+                  <Star className="h-8 w-8 text-yellow-600" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Team Members Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredMembers.map((member) => (
-          <Card key={member.id} className="card-bbq hover:shadow-bbq transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
+          {/* Search and Filters */}
+          <Card className="bg-gradient-to-r from-card/50 to-card border-border/50">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search team members..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  <Select value={filterRole} onValueChange={setFilterRole}>
+                    <SelectTrigger className="w-[180px]">
+                      <Filter className="w-4 h-4 mr-2" />
+                      <SelectValue placeholder="Filter by role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="Pitmaster">Pitmaster</SelectItem>
+                      <SelectItem value="Kitchen Manager">Kitchen Manager</SelectItem>
+                      <SelectItem value="Prep Cook">Prep Cook</SelectItem>
+                      <SelectItem value="Line Cook">Line Cook</SelectItem>
+                      <SelectItem value="Server">Server</SelectItem>
+                      <SelectItem value="Shift Supervisor">Shift Supervisor</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">On Shift</SelectItem>
+                      <SelectItem value="break">On Break</SelectItem>
+                      <SelectItem value="off-duty">Off Duty</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Team Members Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredMembers.map((member) => (
+              <Card key={member.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center space-x-4">
                     <Avatar className="h-12 w-12">
                       <AvatarFallback className="bg-gradient-fire text-white font-semibold">
                         {member.name.split(' ').map(n => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
-                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${getStatusColor(member.status)}`} />
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{member.name}</CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        <ChefHat className="w-4 h-4" />
+                        {member.role}
+                      </CardDescription>
+                    </div>
+                    <div className={`w-3 h-3 rounded-full ${getStatusColor(member.status)}`} />
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">{member.name}</CardTitle>
-                    <Badge variant="secondary" className="text-xs">
-                      {member.role}
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {/* Status */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Status</span>
+                    <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
+                      {getStatusText(member.status)}
                     </Badge>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-muted-foreground">{getStatusText(member.status)}</p>
-                  {member.status === 'active' && (
-                    <p className="text-xs text-muted-foreground">{member.shiftHours}h today</p>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              {/* Performance Metrics */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <Flame className="h-4 w-4 text-accent" />
-                    <span className="text-lg font-bold text-accent">{member.qCash}</span>
+
+                  {/* Performance Metrics */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <Flame className="w-4 h-4 text-orange-500" />
+                        <span className="text-sm font-medium">Q-Cash</span>
+                      </div>
+                      <p className="text-lg font-bold text-orange-600">${member.qCash}</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-yellow-500" />
+                        <span className="text-sm font-medium">Rating</span>
+                      </div>
+                      <p className="text-lg font-bold text-yellow-600">{member.rating}</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">Q-Cash</p>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <Star className="h-4 w-4 text-accent" />
-                    <span className="text-lg font-bold">{member.rating}</span>
+
+                  {/* Shift Hours */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Today's Hours</span>
+                      <span className="text-sm font-medium">{member.shiftHours}h</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">Rating</p>
-                </div>
-              </div>
 
-              {/* Certifications */}
-              <div>
-                <p className="text-sm font-medium mb-2 flex items-center gap-1">
-                  <Award className="h-4 w-4" />
-                  Certifications
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {member.certifications.slice(0, 2).map((cert, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {cert}
-                    </Badge>
-                  ))}
-                  {member.certifications.length > 2 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{member.certifications.length - 2} more
-                    </Badge>
-                  )}
-                </div>
-              </div>
+                  {/* Certifications */}
+                  <div className="space-y-2">
+                    <span className="text-sm text-muted-foreground">Certifications</span>
+                    <div className="flex flex-wrap gap-1">
+                      {member.certifications.map((cert, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          <Award className="w-3 h-3 mr-1" />
+                          {cert}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" size="sm" className="flex-1">
-                  View Profile
-                </Button>
-                <Button variant="secondary" size="sm" className="gap-1">
-                  <Flame className="h-3 w-3" />
-                  Award
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      View Details
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1">
+                      Schedule
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-      {filteredMembers.length === 0 && (
-        <Card className="card-bbq">
-          <CardContent className="text-center py-8">
-            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No team members found</h3>
-            <p className="text-muted-foreground">Try adjusting your search or filters</p>
-          </CardContent>
-        </Card>
-      )}
+          {filteredMembers.length === 0 && (
+            <div className="text-center py-12">
+              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-muted-foreground">No team members found</h3>
+              <p className="text-muted-foreground">Try adjusting your search or filter criteria</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="management">
+          <AccountManagement />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

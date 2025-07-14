@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          reason: string | null
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          reason?: string | null
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          reason?: string | null
+          record_id?: string
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checklist_tasks: {
         Row: {
           actual_minutes: number | null
@@ -248,6 +292,75 @@ export type Database = {
           },
         ]
       }
+      employee_invitations: {
+        Row: {
+          accepted_at: string | null
+          email: string
+          employee_id: string | null
+          expires_at: string
+          first_name: string
+          id: string
+          invited_at: string
+          invited_by: string | null
+          last_name: string
+          phone: string | null
+          role: string
+          status: string
+          store_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          email: string
+          employee_id?: string | null
+          expires_at?: string
+          first_name: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          last_name: string
+          phone?: string | null
+          role?: string
+          status?: string
+          store_id: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          email?: string
+          employee_id?: string | null
+          expires_at?: string
+          first_name?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          last_name?: string
+          phone?: string | null
+          role?: string
+          status?: string
+          store_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_invitations_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -468,6 +581,41 @@ export type Database = {
             foreignKeyName: "shifts_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_onboarding: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          step: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          step?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          step?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_onboarding_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },

@@ -33,7 +33,7 @@ interface AuthContextType {
   store: Store | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, storeId: string, firstName: string, lastName: string, role?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, firstName: string, lastName: string, storeName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   signInWithPin: (pin: string) => Promise<{ error: any }>;
 }
@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
-  const signUp = async (email: string, password: string, storeId: string, firstName: string, lastName: string, role: string = 'team_member') => {
+  const signUp = async (email: string, password: string, firstName: string, lastName: string, storeName: string = '') => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -135,21 +135,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) return { error };
 
-    // Create profile after successful signup
+    // Create store and profile after successful signup
     if (data.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            user_id: data.user.id,
-            store_id: storeId,
-            first_name: firstName,
-            last_name: lastName,
-            role: role,
-          }
-        ]);
+      try {
+        // First create the store
+        const { data: storeData, error: storeError } = await supabase
+          .from('stores')
+          .insert([
+            {
+              name: storeName || 'My Restaurant',
+              location: 'New Location',
+              is_active: true
+            }
+          ])
+          .select()
+          .single();
 
-      if (profileError) return { error: profileError };
+        if (storeError) throw storeError;
+
+        // Then create the profile as operator
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              user_id: data.user.id,
+              store_id: storeData.id,
+              first_name: firstName,
+              last_name: lastName,
+              role: 'operator',
+            }
+          ]);
+
+        if (profileError) throw profileError;
+
+        // Create onboarding record
+        const { error: onboardingError } = await supabase
+          .from('store_onboarding')
+          .insert([
+            {
+              store_id: storeData.id,
+              step: 'store_setup'
+            }
+          ]);
+
+        if (onboardingError) throw onboardingError;
+
+      } catch (error) {
+        return { error };
+      }
     }
 
     return { error: null };

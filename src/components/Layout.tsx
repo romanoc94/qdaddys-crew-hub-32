@@ -43,6 +43,11 @@ export default function Layout() {
     return <Navigate to="/auth" replace />;
   }
 
+  // Check if user needs onboarding - check for incomplete store setup
+  if (user && profile && store && (store.name === 'My Restaurant' || !store.address)) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-smoke">
       {/* Mobile sidebar */}

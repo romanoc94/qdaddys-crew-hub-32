@@ -10,6 +10,7 @@ import TeamPage from "./components/TeamPage";
 import ShiftsPage from "./components/ShiftsPage";
 import ChecklistsPage from "./components/ChecklistsPage";
 import AuthPage from "./components/auth/AuthPage";
+import OnboardingWizard from "./components/onboarding/OnboardingWizard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/onboarding" element={<OnboardingWizard />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
               <Route path="team" element={<TeamPage />} />
