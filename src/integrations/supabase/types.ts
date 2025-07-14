@@ -70,6 +70,175 @@ export type Database = {
           },
         ]
       }
+      qcash_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          profile_id: string
+          shift_id: string | null
+          source_profile_id: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          profile_id: string
+          shift_id?: string | null
+          source_profile_id?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          profile_id?: string
+          shift_id?: string | null
+          source_profile_id?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qcash_transactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qcash_transactions_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qcash_transactions_source_profile_id_fkey"
+            columns: ["source_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_assignments: {
+        Row: {
+          bbq_buddy_id: string | null
+          created_at: string
+          id: string
+          is_scheduled: boolean
+          primary_role: string
+          profile_id: string
+          secondary_roles: string[] | null
+          shift_id: string
+          updated_at: string
+        }
+        Insert: {
+          bbq_buddy_id?: string | null
+          created_at?: string
+          id?: string
+          is_scheduled?: boolean
+          primary_role: string
+          profile_id: string
+          secondary_roles?: string[] | null
+          shift_id: string
+          updated_at?: string
+        }
+        Update: {
+          bbq_buddy_id?: string | null
+          created_at?: string
+          id?: string
+          is_scheduled?: boolean
+          primary_role?: string
+          profile_id?: string
+          secondary_roles?: string[] | null
+          shift_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_assignments_bbq_buddy_id_fkey"
+            columns: ["bbq_buddy_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          catering_notes: string | null
+          created_at: string
+          created_by: string | null
+          daily_specials: string | null
+          date: string
+          end_time: string | null
+          id: string
+          notes: string | null
+          shift_type: string
+          start_time: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          catering_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          daily_specials?: string | null
+          date: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          shift_type: string
+          start_time?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          catering_notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          daily_specials?: string | null
+          date?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          shift_type?: string
+          start_time?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           address: string | null

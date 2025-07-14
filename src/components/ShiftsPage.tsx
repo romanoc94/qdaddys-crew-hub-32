@@ -1,383 +1,623 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 import { 
-  Calendar, 
   Clock, 
   Users, 
-  Plus,
-  MapPin,
-  ChefHat,
+  Plus, 
+  ChefHat, 
+  CreditCard, 
+  Utensils, 
+  UserPlus,
+  CalendarDays,
   Flame,
-  Calendar as CalendarIcon
-} from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+  NotebookPen
+} from 'lucide-react';
 
-interface ShiftAssignment {
+interface Profile {
   id: string;
-  employee: string;
+  first_name: string;
+  last_name: string;
   role: string;
-  startTime: string;
-  endTime: string;
-  avatar?: string;
-  status: 'scheduled' | 'active' | 'completed';
+  user_id: string;
 }
 
 interface Shift {
   id: string;
   date: string;
-  location: string;
+  shift_type: string;
+  start_time: string;
+  end_time: string;
+  notes: string;
+  daily_specials: string;
+  catering_notes: string;
   assignments: ShiftAssignment[];
-  notes?: string;
-  specialEvents?: string[];
 }
 
-export default function ShiftsPage() {
-  const [selectedDate, setSelectedDate] = useState("2024-01-15");
-  
-  const shifts: Shift[] = [
-    {
-      id: "1",
-      date: "2024-01-15",
-      location: "Mansfield Location",
-      notes: "Catering pickup at 2 PM - Corporate event (50 people)",
-      specialEvents: ["Large Catering Order"],
-      assignments: [
-        {
-          id: "1",
-          employee: "Mike Rodriguez",
-          role: "Pitmaster",
-          startTime: "06:00",
-          endTime: "14:00",
-          status: "active"
-        },
-        {
-          id: "2", 
-          employee: "Sarah Wilson",
-          role: "Shift Leader",
-          startTime: "07:00",
-          endTime: "15:00",
-          status: "active"
-        },
-        {
-          id: "3",
-          employee: "David Kim",
-          role: "Prep Cook", 
-          startTime: "09:00",
-          endTime: "17:00",
-          status: "scheduled"
-        },
-        {
-          id: "4",
-          employee: "Jessica Chen",
-          role: "Cashier",
-          startTime: "11:00",
-          endTime: "19:00", 
-          status: "scheduled"
-        },
-        {
-          id: "5",
-          employee: "Marcus Johnson",
-          role: "Catering Lead",
-          startTime: "10:00",
-          endTime: "18:00",
-          status: "active"
-        }
-      ]
-    }
-  ];
+interface ShiftAssignment {
+  id: string;
+  profile_id: string;
+  primary_role: string;
+  secondary_roles: string[] | null;
+  bbq_buddy_id: string | null;
+  is_scheduled: boolean;
+  profiles: Profile;
+  bbq_buddy?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    role: string;
+  } | null;
+}
 
-  const currentShift = shifts.find(s => s.date === selectedDate);
-  
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-500';
-      case 'scheduled': return 'bg-primary';
-      case 'completed': return 'bg-muted-foreground';
-      default: return 'bg-muted-foreground';
+const ROLES = [
+  { value: 'pitmaster', label: 'Pitmaster', icon: ChefHat, color: 'bg-primary' },
+  { value: 'cashier', label: 'Cashier', icon: CreditCard, color: 'bg-accent' },
+  { value: 'prep_cook', label: 'Prep Cook', icon: Utensils, color: 'bg-secondary' },
+  { value: 'catering_lead', label: 'Catering Lead', icon: Users, color: 'bg-primary-glow' },
+  { value: 'front_of_house', label: 'Front of House', icon: UserPlus, color: 'bg-muted' },
+  { value: 'manager', label: 'Manager', icon: Users, color: 'bg-destructive' },
+];
+
+const SHIFT_TYPES = [
+  { value: 'opening', label: 'Opening', time: '06:00-11:00' },
+  { value: 'lunch', label: 'Lunch', time: '10:00-15:00' },
+  { value: 'dinner', label: 'Dinner', time: '15:00-22:00' },
+  { value: 'closing', label: 'Closing', time: '20:00-24:00' },
+  { value: 'all_day', label: 'All Day', time: '06:00-22:00' },
+];
+
+const ShiftsPage = () => {
+  const { profile, store } = useAuth();
+  const { toast } = useToast();
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [availableStaff, setAvailableStaff] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showCreateShift, setShowCreateShift] = useState(false);
+  const [newShift, setNewShift] = useState({
+    shift_type: '',
+    start_time: '',
+    end_time: '',
+    notes: '',
+    daily_specials: '',
+    catering_notes: '',
+  });
+
+  useEffect(() => {
+    if (store?.id) {
+      fetchShifts();
+      fetchAvailableStaff();
+    }
+  }, [store?.id, selectedDate]);
+
+  const fetchShifts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('shifts')
+        .select(`
+          *,
+          shift_assignments!inner (
+            *,
+            profiles!shift_assignments_profile_id_fkey (
+              id, first_name, last_name, role, user_id
+            ),
+            bbq_buddy:profiles!shift_assignments_bbq_buddy_id_fkey (
+              id, first_name, last_name, role
+            )
+          )
+        `)
+        .eq('store_id', store?.id)
+        .eq('date', selectedDate)
+        .order('start_time');
+
+      if (error) throw error;
+
+      const shiftsWithAssignments = data?.map(shift => ({
+        ...shift,
+        assignments: (shift.shift_assignments || []).map((assignment: any) => ({
+          ...assignment,
+          secondary_roles: assignment.secondary_roles || []
+        }))
+      })) || [];
+
+      setShifts(shiftsWithAssignments as Shift[]);
+    } catch (error) {
+      console.error('Error fetching shifts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load shifts",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAvailableStaff = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, role, user_id')
+        .eq('store_id', store?.id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setAvailableStaff(data || []);
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+    }
+  };
+
+  const createShift = async () => {
+    if (!store?.id || !newShift.shift_type) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('shifts')
+        .insert([
+          {
+            store_id: store.id,
+            date: selectedDate,
+            ...newShift,
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Shift created successfully",
+      });
+
+      setShowCreateShift(false);
+      setNewShift({
+        shift_type: '',
+        start_time: '',
+        end_time: '',
+        notes: '',
+        daily_specials: '',
+        catering_notes: '',
+      });
+      fetchShifts();
+    } catch (error) {
+      console.error('Error creating shift:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create shift",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const onDragEnd = async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) return;
+
+    // If dropped in the same place, do nothing
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      return;
+    }
+
+    // Handle staff assignment
+    if (destination.droppableId.startsWith('shift-')) {
+      const shiftId = destination.droppableId.replace('shift-', '');
+      const staffId = draggableId.replace('staff-', '');
+      
+      await assignStaffToShift(shiftId, staffId);
+    }
+  };
+
+  const assignStaffToShift = async (shiftId: string, staffId: string) => {
+    try {
+      const { error } = await supabase
+        .from('shift_assignments')
+        .insert([
+          {
+            shift_id: shiftId,
+            profile_id: staffId,
+            primary_role: 'front_of_house', // Default role
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Staff assigned to shift",
+      });
+
+      fetchShifts();
+    } catch (error) {
+      console.error('Error assigning staff:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign staff",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateAssignmentRole = async (assignmentId: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('shift_assignments')
+        .update({ primary_role: newRole })
+        .eq('id', assignmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Role updated successfully",
+      });
+
+      fetchShifts();
+    } catch (error) {
+      console.error('Error updating role:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update role",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeAssignment = async (assignmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('shift_assignments')
+        .delete()
+        .eq('id', assignmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Staff removed from shift",
+      });
+
+      fetchShifts();
+    } catch (error) {
+      console.error('Error removing assignment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove staff",
+        variant: "destructive",
+      });
     }
   };
 
   const getRoleIcon = (role: string) => {
-    if (role.toLowerCase().includes('pitmaster')) return ChefHat;
-    if (role.toLowerCase().includes('leader')) return Users;
-    return Clock;
+    const roleData = ROLES.find(r => r.value === role);
+    return roleData ? roleData.icon : Users;
   };
 
-  const currentTime = "12:30";
-  const activeAssignments = currentShift?.assignments.filter(a => a.status === 'active') || [];
-  const upcomingAssignments = currentShift?.assignments.filter(a => a.status === 'scheduled') || [];
+  const getRoleColor = (role: string) => {
+    const roleData = ROLES.find(r => r.value === role);
+    return roleData ? roleData.color : 'bg-muted';
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bbq font-bold text-foreground">Shift Management</h1>
-          <p className="text-muted-foreground mt-1">Manage daily operations and staff assignments</p>
+          <h1 className="text-3xl font-bbq font-bold text-foreground flex items-center gap-2">
+            <CalendarDays className="h-8 w-8 text-primary" />
+            Shifts Management
+          </h1>
+          <p className="text-muted-foreground">Manage daily shifts and assign your BBQ crew</p>
         </div>
-        <div className="mt-4 sm:mt-0 flex gap-2">
-          <Button variant="outline" className="gap-2">
-            <CalendarIcon className="h-4 w-4" />
-            Schedule
-          </Button>
-          <Button className="btn-bbq gap-2">
-            <Plus className="h-4 w-4" />
-            New Shift
-          </Button>
-        </div>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="card-bbq">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-8 w-8 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">{activeAssignments.length}</p>
-                <p className="text-xs text-muted-foreground">Currently Active</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-bbq">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-8 w-8 text-accent" />
-              <div>
-                <p className="text-2xl font-bold">{upcomingAssignments.length}</p>
-                <p className="text-xs text-muted-foreground">Coming Up</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-bbq">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-8 w-8 text-green-600" />
-              <div>
-                <p className="text-lg font-bold">Mansfield</p>
-                <p className="text-xs text-muted-foreground">Active Location</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-bbq">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Flame className="h-8 w-8 text-accent" />
-              <div>
-                <p className="text-2xl font-bold">1</p>
-                <p className="text-xs text-muted-foreground">Special Events</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Shift Display */}
-      {currentShift && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Shift Overview */}
-          <div className="lg:col-span-2">
-            <Card className="card-bbq">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+        
+        <div className="flex items-center gap-4">
+          <Input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-auto"
+          />
+          
+          {profile?.role && ['shift_leader', 'manager', 'operator'].includes(profile.role) && (
+            <Dialog open={showCreateShift} onOpenChange={setShowCreateShift}>
+              <DialogTrigger asChild>
+                <Button className="btn-bbq">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Shift
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Shift</DialogTitle>
+                </DialogHeader>
+                
+                <div className="space-y-4">
                   <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
-                      Today's Shift - {currentShift.location}
-                    </CardTitle>
-                    <CardDescription>Monday, January 15, 2024 • Current time: {currentTime}</CardDescription>
+                    <Label htmlFor="shift_type">Shift Type</Label>
+                    <Select value={newShift.shift_type} onValueChange={(value) => setNewShift({ ...newShift, shift_type: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select shift type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SHIFT_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label} ({type.time})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {currentShift.assignments.length} Staff Assigned
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Special Events */}
-                {currentShift.specialEvents && currentShift.specialEvents.length > 0 && (
-                  <div className="p-3 bg-accent/10 border border-accent/20 rounded-lg">
-                    <h4 className="font-semibold text-sm mb-1 text-accent">Special Events Today</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {currentShift.specialEvents.map((event, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {event}
-                        </Badge>
-                      ))}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="start_time">Start Time</Label>
+                      <Input
+                        id="start_time"
+                        type="time"
+                        value={newShift.start_time}
+                        onChange={(e) => setNewShift({ ...newShift, start_time: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="end_time">End Time</Label>
+                      <Input
+                        id="end_time"
+                        type="time"
+                        value={newShift.end_time}
+                        onChange={(e) => setNewShift({ ...newShift, end_time: e.target.value })}
+                      />
                     </div>
                   </div>
-                )}
 
-                {/* Notes */}
-                {currentShift.notes && (
-                  <div className="p-3 bg-muted/50 rounded-lg">
-                    <h4 className="font-semibold text-sm mb-1">Shift Notes</h4>
-                    <p className="text-sm text-muted-foreground">{currentShift.notes}</p>
+                  <div>
+                    <Label htmlFor="notes">Shift Notes</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="General shift notes..."
+                      value={newShift.notes}
+                      onChange={(e) => setNewShift({ ...newShift, notes: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="daily_specials">Daily Specials</Label>
+                    <Textarea
+                      id="daily_specials"
+                      placeholder="Today's BBQ specials..."
+                      value={newShift.daily_specials}
+                      onChange={(e) => setNewShift({ ...newShift, daily_specials: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="catering_notes">Catering Notes</Label>
+                    <Textarea
+                      id="catering_notes"
+                      placeholder="Catering orders and special instructions..."
+                      value={newShift.catering_notes}
+                      onChange={(e) => setNewShift({ ...newShift, catering_notes: e.target.value })}
+                    />
+                  </div>
+
+                  <Button onClick={createShift} className="w-full btn-bbq">
+                    Create Shift
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+      </div>
+
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="grid gap-6">
+          {/* Available Staff */}
+          <Card className="card-bbq">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Available Staff
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Droppable droppableId="available-staff" direction="horizontal">
+                {(provided) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="flex gap-2 min-h-[60px] p-2 bg-muted/30 rounded-lg flex-wrap"
+                  >
+                    {availableStaff.map((staff, index) => (
+                      <Draggable key={staff.id} draggableId={`staff-${staff.id}`} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`
+                              px-3 py-2 bg-card border rounded-md shadow-sm cursor-move
+                              ${snapshot.isDragging ? 'shadow-lg scale-105' : ''}
+                              hover:shadow-md transition-all
+                            `}
+                          >
+                            <div className="text-sm font-medium">
+                              {staff.first_name} {staff.last_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {staff.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
                   </div>
                 )}
+              </Droppable>
+            </CardContent>
+          </Card>
 
-                {/* Staff Assignments */}
-                <div>
-                  <h4 className="font-semibold text-sm mb-3">Staff Assignments</h4>
-                  <div className="space-y-3">
-                    {currentShift.assignments.map((assignment) => {
-                      const RoleIcon = getRoleIcon(assignment.role);
-                      const isCurrentlyWorking = assignment.status === 'active';
-                      
-                      return (
-                        <div 
-                          key={assignment.id}
-                          className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                            isCurrentlyWorking 
-                              ? 'bg-green-50 border-green-200' 
-                              : 'bg-muted/30 border-border'
-                          }`}
+          {/* Shifts */}
+          <div className="grid gap-4">
+            {shifts.length === 0 ? (
+              <Alert>
+                <Flame className="h-4 w-4" />
+                <AlertDescription>
+                  No shifts scheduled for {selectedDate}. Create a shift to get started!
+                </AlertDescription>
+              </Alert>
+            ) : (
+              shifts.map((shift) => (
+                <Card key={shift.id} className="card-bbq">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-primary" />
+                        {SHIFT_TYPES.find(t => t.value === shift.shift_type)?.label || shift.shift_type}
+                        <Badge variant="outline">
+                          {shift.start_time} - {shift.end_time}
+                        </Badge>
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">
+                          {shift.assignments.length} staff assigned
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    {(shift.notes || shift.daily_specials || shift.catering_notes) && (
+                      <div className="grid gap-2 text-sm">
+                        {shift.notes && (
+                          <div className="flex items-start gap-2">
+                            <NotebookPen className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <span>{shift.notes}</span>
+                          </div>
+                        )}
+                        {shift.daily_specials && (
+                          <div className="flex items-start gap-2">
+                            <Flame className="h-4 w-4 text-accent mt-0.5" />
+                            <span className="text-accent font-medium">Specials: {shift.daily_specials}</span>
+                          </div>
+                        )}
+                        {shift.catering_notes && (
+                          <div className="flex items-start gap-2">
+                            <Users className="h-4 w-4 text-primary mt-0.5" />
+                            <span className="text-primary">Catering: {shift.catering_notes}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardHeader>
+                  
+                  <CardContent>
+                    <Droppable droppableId={`shift-${shift.id}`}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={`
+                            min-h-[100px] p-4 rounded-lg border-2 border-dashed transition-colors
+                            ${snapshot.isDraggingOver ? 'border-primary bg-primary/5' : 'border-border bg-muted/20'}
+                          `}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <Avatar className="h-10 w-10">
-                                <AvatarFallback className="bg-gradient-fire text-white font-semibold text-sm">
-                                  {assignment.employee.split(' ').map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(assignment.status)}`} />
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">{assignment.employee}</p>
-                              <div className="flex items-center gap-1">
-                                <RoleIcon className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">{assignment.role}</span>
-                              </div>
-                            </div>
+                          <div className="grid gap-3">
+                            {shift.assignments.map((assignment, index) => {
+                              const RoleIcon = getRoleIcon(assignment.primary_role);
+                              return (
+                                <div
+                                  key={assignment.id}
+                                  className="flex items-center justify-between p-3 bg-card border rounded-lg shadow-sm"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-full ${getRoleColor(assignment.primary_role)} text-white`}>
+                                      <RoleIcon className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                      <div className="font-medium">
+                                        {assignment.profiles.first_name} {assignment.profiles.last_name}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {assignment.primary_role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                      </div>
+                                    </div>
+                                    {assignment.bbq_buddy && (
+                                      <Badge variant="outline" className="text-xs">
+                                        BBQ Buddy: {assignment.bbq_buddy.first_name}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <Select
+                                      value={assignment.primary_role}
+                                      onValueChange={(value) => updateAssignmentRole(assignment.id, value)}
+                                    >
+                                      <SelectTrigger className="w-auto">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {ROLES.map((role) => (
+                                          <SelectItem key={role.value} value={role.value}>
+                                            {role.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeAssignment(assignment.id)}
+                                      className="text-destructive hover:text-destructive"
+                                    >
+                                      Remove
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
+                          {provided.placeholder}
                           
-                          <div className="text-right">
-                            <p className="font-medium text-sm">{assignment.startTime} - {assignment.endTime}</p>
-                            <Badge 
-                              variant={assignment.status === 'active' ? 'default' : 'secondary'}
-                              className="text-xs"
-                            >
-                              {assignment.status === 'active' ? 'Working Now' : 
-                               assignment.status === 'scheduled' ? 'Scheduled' : 'Completed'}
-                            </Badge>
-                          </div>
+                          {shift.assignments.length === 0 && (
+                            <div className="text-center text-muted-foreground py-8">
+                              Drag staff here to assign them to this shift
+                            </div>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="flex flex-wrap gap-2 pt-4 border-t border-border">
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Plus className="h-3 w-3" />
-                    Add Staff
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Flame className="h-3 w-3" />
-                    Award Q-Cash
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Clock className="h-3 w-3" />
-                    Log Break
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar - BBQ Buddies & Quick Actions */}
-          <div className="space-y-4">
-            {/* BBQ Buddies */}
-            <Card className="card-bbq">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <ChefHat className="h-4 w-4" />
-                  BBQ Buddies
-                </CardTitle>
-                <CardDescription className="text-xs">Staff rotation pairs</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
-                  <div className="flex -space-x-2">
-                    <Avatar className="h-6 w-6 border-2 border-background">
-                      <AvatarFallback className="text-xs bg-primary text-primary-foreground">MR</AvatarFallback>
-                    </Avatar>
-                    <Avatar className="h-6 w-6 border-2 border-background">
-                      <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">DK</AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">Mike & David</p>
-                    <p className="text-xs text-muted-foreground">Pit ↔ Prep</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
-                  <div className="flex -space-x-2">
-                    <Avatar className="h-6 w-6 border-2 border-background">
-                      <AvatarFallback className="text-xs bg-primary text-primary-foreground">SW</AvatarFallback>
-                    </Avatar>
-                    <Avatar className="h-6 w-6 border-2 border-background">
-                      <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">JC</AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">Sarah & Jessica</p>
-                    <p className="text-xs text-muted-foreground">Leader ↔ Front</p>
-                  </div>
-                </div>
-
-                <Button variant="outline" size="sm" className="w-full text-xs">
-                  Manage Pairs
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Temperature Monitor */}
-            <Card className="card-bbq">
-              <CardHeader>
-                <CardTitle className="text-sm">Pit Temperatures</CardTitle>
-                <CardDescription className="text-xs">Live monitoring</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between items-center p-2 bg-green-50 border border-green-200 rounded">
-                  <span className="text-sm font-medium">Pit #1</span>
-                  <span className="font-bold text-green-600">225°F ✓</span>
-                </div>
-                <div className="flex justify-between items-center p-2 bg-red-50 border border-red-200 rounded">
-                  <span className="text-sm font-medium">Pit #2</span>
-                  <span className="font-bold text-red-600">195°F ⚠</span>
-                </div>
-                <Button variant="outline" size="sm" className="w-full text-xs">
-                  View Details
-                </Button>
-              </CardContent>
-            </Card>
+                      )}
+                    </Droppable>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
-      )}
-
-      {!currentShift && (
-        <Card className="card-bbq">
-          <CardContent className="text-center py-8">
-            <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No shifts scheduled</h3>
-            <p className="text-muted-foreground mb-4">Create a new shift to get started</p>
-            <Button className="btn-bbq gap-2">
-              <Plus className="h-4 w-4" />
-              Create New Shift
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      </DragDropContext>
     </div>
   );
-}
+};
+
+export default ShiftsPage;
