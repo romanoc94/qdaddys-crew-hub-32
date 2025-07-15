@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { 
   Users, 
   Clock, 
@@ -42,6 +43,12 @@ export default function Dashboard() {
     { task: "Prep sauce bottles", assigned: "Sarah Wilson", status: "in-progress" },
     { task: "Stock napkin dispensers", assigned: "David Kim", status: "pending" },
     { task: "Temperature check - Pit #2", assigned: "Auto-assigned", status: "overdue" },
+  ];
+
+  const checklistProgress = [
+    { id: '1', name: 'Opening Checklist', progress: 75, critical: true, assignedTo: 'Marcus Johnson' },
+    { id: '2', name: 'Prep Checklist', progress: 30, critical: false, assignedTo: 'Sarah Chen' },
+    { id: '3', name: 'Lunch Checklist', progress: 90, critical: false, assignedTo: 'Emily Davis' },
   ];
 
   return (
@@ -169,7 +176,44 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Alerts & Notifications */}
+        {/* Checklist Progress */}
+        <Card className="card-bbq">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ChefHat className="h-5 w-5" />
+              Checklist Progress
+            </CardTitle>
+            <CardDescription>Current operational checklist status</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {checklistProgress.map((checklist) => (
+              <div key={checklist.id} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-sm flex items-center gap-2">
+                      {checklist.name}
+                      {checklist.critical && (
+                        <AlertTriangle className="h-3 w-3 text-orange-500" />
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Assigned to: {checklist.assignedTo}
+                    </div>
+                  </div>
+                  <span className="text-sm font-medium">{checklist.progress}%</span>
+                </div>
+                <Progress value={checklist.progress} className="h-2" />
+              </div>
+            ))}
+            <Button variant="outline" className="w-full mt-4">
+              View All Checklists
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Additional Row - Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="card-bbq">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

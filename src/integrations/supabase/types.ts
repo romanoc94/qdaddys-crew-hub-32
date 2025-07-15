@@ -751,12 +751,14 @@ export type Database = {
           id: string
           notes: string | null
           profile_id: string
-          progress_percentage: number | null
+          progress: number | null
           score: number | null
           started_at: string | null
           status: string
+          store_id: string | null
           template_id: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -770,12 +772,14 @@ export type Database = {
           id?: string
           notes?: string | null
           profile_id: string
-          progress_percentage?: number | null
+          progress?: number | null
           score?: number | null
           started_at?: string | null
           status?: string
+          store_id?: string | null
           template_id: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -789,14 +793,38 @@ export type Database = {
           id?: string
           notes?: string | null
           profile_id?: string
-          progress_percentage?: number | null
+          progress?: number | null
           score?: number | null
           started_at?: string | null
           status?: string
+          store_id?: string | null
           template_id?: string
           updated_at?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_profile_id"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_store_id"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_template_id"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "training_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_template_tasks: {
         Row: {
@@ -839,51 +867,57 @@ export type Database = {
       }
       training_templates: {
         Row: {
-          category: string
+          category: string | null
           certification_required: boolean | null
           created_at: string
           created_by: string | null
           description: string | null
           estimated_duration_hours: number | null
+          estimated_time: number | null
           id: string
           is_active: boolean | null
           level: string
           name: string
           quiz_questions: Json | null
+          role_associations: string[] | null
           role_requirements: string[] | null
-          store_id: string
+          store_id: string | null
           updated_at: string
         }
         Insert: {
-          category: string
+          category?: string | null
           certification_required?: boolean | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           estimated_duration_hours?: number | null
+          estimated_time?: number | null
           id?: string
           is_active?: boolean | null
           level: string
           name: string
           quiz_questions?: Json | null
+          role_associations?: string[] | null
           role_requirements?: string[] | null
-          store_id: string
+          store_id?: string | null
           updated_at?: string
         }
         Update: {
-          category?: string
+          category?: string | null
           certification_required?: boolean | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           estimated_duration_hours?: number | null
+          estimated_time?: number | null
           id?: string
           is_active?: boolean | null
           level?: string
           name?: string
           quiz_questions?: Json | null
+          role_associations?: string[] | null
           role_requirements?: string[] | null
-          store_id?: string
+          store_id?: string | null
           updated_at?: string
         }
         Relationships: []
