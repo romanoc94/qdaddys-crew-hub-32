@@ -135,6 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string, storeName: string = '') => {
+    console.log('Starting signup process for:', email);
+    
     const redirectUrl = `${window.location.origin}/`;
     
     const { data, error } = await supabase.auth.signUp({
@@ -145,51 +147,114 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    if (error) return { error };
-
-    // Create store and profile after successful signup
-    if (data.user) {
-      try {
-        // First create the store via RPC function
-        const { data: storeId, error: storeError } = await supabase.rpc('create_store_during_signup', {
-          p_name: storeName || 'My Restaurant',
-          p_location: 'New Location',
-          p_address: null,
-          p_phone: null,
-          p_toast_pos_id: null
-        });
-
-        if (storeError) throw storeError;
-
-        // Then create the profile as operator
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: data.user.id,
-            store_id: storeId,
-            first_name: firstName,
-            last_name: lastName,
-            role: 'operator',
-          });
-
-        if (profileError) throw profileError;
-
-        // Create onboarding record
-        const { error: onboardingError } = await supabase
-          .from('store_onboarding')
-          .insert({
-            store_id: storeId,
-            step: 'store_setup'
-          });
-
-        if (onboardingError) throw onboardingError;
-
-      } catch (error) {
-        return { error };
-      }
+    if (error) {
+      console.error('Auth signup error:', error);
+      return { error };
     }
 
-    return { error: null };
+    if (!data.user) {
+      console.error('No user returned from signup');
+      return { error: { message: 'No user created' } };
+    }
+
+    console.log('User created successfully:', data.user.id);
+
+    // Track what we've created for cleanup on failure
+    let createdStoreId: string | null = null;
+    let createdProfile = false;
+
+    try {
+      // First create the store via RPC function
+      console.log('Creating store with name:', storeName || 'My Restaurant');
+      const { data: storeId, error: storeError } = await supabase.rpc('create_store_during_signup', {
+        p_name: storeName || 'My Restaurant',
+        p_location: 'New Location',
+        p_address: '',
+        p_phone: '',
+        p_toast_pos_id: ''
+      });
+
+      if (storeError) {
+        console.error('Store creation error:', storeError);
+        throw new Error(`Store creation failed: ${storeError.message}`);
+      }
+
+      if (!storeId) {
+        console.error('No store ID returned from RPC');
+        throw new Error('Store creation failed: No store ID returned');
+      }
+
+      createdStoreId = storeId;
+      console.log('Store created successfully:', storeId);
+
+      // Then create the profile as operator with all required defaults
+      console.log('Creating profile for user:', data.user.id, 'in store:', storeId);
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: data.user.id,
+          store_id: storeId,
+          first_name: firstName || '',
+          last_name: lastName || '',
+          role: 'operator',
+          employee_id: null,
+          phone: null,
+          pin: null,
+          permissions: [],
+          is_active: true
+        });
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw new Error(`Profile creation failed: ${profileError.message}`);
+      }
+
+      createdProfile = true;
+      console.log('Profile created successfully');
+
+      // Create onboarding record
+      console.log('Creating onboarding record for store:', storeId);
+      const { error: onboardingError } = await supabase
+        .from('store_onboarding')
+        .insert({
+          store_id: storeId,
+          step: 'store_setup',
+          completed_at: null
+        });
+
+      if (onboardingError) {
+        console.error('Onboarding creation error:', onboardingError);
+        throw new Error(`Onboarding creation failed: ${onboardingError.message}`);
+      }
+
+      console.log('Onboarding record created successfully');
+      console.log('Signup process completed successfully');
+
+      return { error: null };
+
+    } catch (error) {
+      console.error('Signup process failed, cleaning up...', error);
+      
+      // Clean up partial state by signing out the user
+      try {
+        await supabase.auth.signOut();
+        console.log('User signed out after partial failure');
+      } catch (signOutError) {
+        console.error('Failed to sign out after partial failure:', signOutError);
+      }
+      
+      // Reset local state
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setStore(null);
+      
+      return { 
+        error: { 
+          message: error instanceof Error ? error.message : 'Signup failed. Please try again.' 
+        } 
+      };
+    }
   };
 
   const signOut = async () => {
