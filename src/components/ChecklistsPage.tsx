@@ -110,11 +110,22 @@ const ChecklistsPage = () => {
     if (store?.id) {
       fetchChecklists();
       fetchAvailableStaff();
+    } else if (store === null) {
+      // Store is explicitly null, stop loading
+      setLoading(false);
     }
   }, [store?.id, selectedDate]);
 
   const fetchChecklists = async () => {
+    if (!store?.id) {
+      console.log('No store ID available, skipping checklist fetch');
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('Fetching checklists for store:', store.id, 'date:', selectedDate);
+      
       const { data, error } = await supabase
         .from('checklists')
         .select(`
@@ -130,11 +141,16 @@ const ChecklistsPage = () => {
             )
           )
         `)
-        .eq('store_id', store?.id)
+        .eq('store_id', store.id)
         .eq('date', selectedDate)
         .order('created_at');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Checklist fetch error:', error);
+        throw error;
+      }
+
+      console.log('Checklists fetched:', data?.length || 0);
 
       const checklistsWithTasks = data?.map(checklist => ({
         ...checklist,
@@ -151,26 +167,40 @@ const ChecklistsPage = () => {
       console.error('Error fetching checklists:', error);
       toast({
         title: "Error",
-        description: "Failed to load checklists",
+        description: "Failed to load checklists. Please check your connection and try again.",
         variant: "destructive",
       });
+      setChecklists([]);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchAvailableStaff = async () => {
+    if (!store?.id) {
+      console.log('No store ID available, skipping staff fetch');
+      return;
+    }
+
     try {
+      console.log('Fetching staff for store:', store.id);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, role')
-        .eq('store_id', store?.id)
+        .eq('store_id', store.id)
         .eq('is_active', true);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Staff fetch error:', error);
+        throw error;
+      }
+
+      console.log('Staff fetched:', data?.length || 0);
       setAvailableStaff(data || []);
     } catch (error) {
       console.error('Error fetching staff:', error);
+      setAvailableStaff([]);
     }
   };
 
@@ -385,8 +415,21 @@ const ChecklistsPage = () => {
 
   if (loading) {
     return (
-      <div className="p-6 flex justify-center">
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground">Loading checklists...</p>
+      </div>
+    );
+  }
+
+  if (!store) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <div className="text-center">
+          <h3 className="text-lg font-medium">No Store Access</h3>
+          <p className="text-muted-foreground">You need to be associated with a store to view checklists.</p>
+        </div>
       </div>
     );
   }

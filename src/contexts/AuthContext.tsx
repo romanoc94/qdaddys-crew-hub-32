@@ -57,6 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
+      
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(`
@@ -65,16 +67,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         `)
         .eq('user_id', userId)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        throw profileError;
+      }
 
       if (profileData) {
+        console.log('Profile found:', profileData);
         setProfile(profileData as Profile);
         setStore(profileData.stores);
+      } else {
+        console.log('No profile found for user:', userId);
+        setProfile(null);
+        setStore(null);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      setProfile(null);
+      setStore(null);
     }
   };
 

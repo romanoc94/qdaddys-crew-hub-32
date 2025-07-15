@@ -99,16 +99,28 @@ const ShiftsPage = () => {
     if (store?.id) {
       fetchShifts();
       fetchAvailableStaff();
+    } else if (store === null) {
+      // Store is explicitly null, stop loading
+      setLoading(false);
     }
   }, [store?.id, selectedDate]);
 
   const fetchShifts = async () => {
+    if (!store?.id) {
+      console.log('No store ID available, skipping shifts fetch');
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('Fetching shifts for store:', store.id, 'date:', selectedDate);
+      
+      // First get shifts without requiring assignments
       const { data, error } = await supabase
         .from('shifts')
         .select(`
           *,
-          shift_assignments!inner (
+          shift_assignments (
             *,
             profiles!shift_assignments_profile_id_fkey (
               id, first_name, last_name, role, user_id
@@ -118,11 +130,16 @@ const ShiftsPage = () => {
             )
           )
         `)
-        .eq('store_id', store?.id)
+        .eq('store_id', store.id)
         .eq('date', selectedDate)
         .order('start_time');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Shifts fetch error:', error);
+        throw error;
+      }
+
+      console.log('Shifts fetched:', data?.length || 0);
 
       const shiftsWithAssignments = data?.map(shift => ({
         ...shift,
@@ -137,26 +154,40 @@ const ShiftsPage = () => {
       console.error('Error fetching shifts:', error);
       toast({
         title: "Error",
-        description: "Failed to load shifts",
+        description: "Failed to load shifts. Please check your connection and try again.",
         variant: "destructive",
       });
+      setShifts([]);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchAvailableStaff = async () => {
+    if (!store?.id) {
+      console.log('No store ID available, skipping staff fetch');
+      return;
+    }
+
     try {
+      console.log('Fetching staff for store:', store.id);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, role, user_id')
-        .eq('store_id', store?.id)
+        .eq('store_id', store.id)
         .eq('is_active', true);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Staff fetch error:', error);
+        throw error;
+      }
+
+      console.log('Staff fetched:', data?.length || 0);
       setAvailableStaff(data || []);
     } catch (error) {
       console.error('Error fetching staff:', error);
+      setAvailableStaff([]);
     }
   };
 
@@ -314,8 +345,21 @@ const ShiftsPage = () => {
 
   if (loading) {
     return (
-      <div className="p-6 flex justify-center">
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground">Loading shifts...</p>
+      </div>
+    );
+  }
+
+  if (!store) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <Clock className="h-12 w-12 text-muted-foreground" />
+        <div className="text-center">
+          <h3 className="text-lg font-medium">No Store Access</h3>
+          <p className="text-muted-foreground">You need to be associated with a store to view shifts.</p>
+        </div>
       </div>
     );
   }
