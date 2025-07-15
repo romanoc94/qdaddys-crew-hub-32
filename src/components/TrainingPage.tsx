@@ -1,213 +1,189 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
-  GraduationCap, 
-  BookOpen, 
-  Play, 
-  CheckCircle, 
+  Search, 
+  Filter, 
   Star, 
   Clock, 
-  Users, 
   Award, 
-  Target,
+  Users, 
+  BookOpen, 
+  Play, 
+  CheckCircle2,
   Flame,
   ChefHat,
-  UtensilsCrossed,
+  ShieldCheck,
+  Target,
   TrendingUp,
-  UserCheck
-} from 'lucide-react';
+  User,
+  Plus,
+  Settings,
+  GraduationCap,
+  UserCheck,
+  UtensilsCrossed,
+  FileText,
+  Video,
+  AlertCircle
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { TrainingInstanceCard, TrainingInstance } from "./training/TrainingInstanceCard";
+import { TrainingChecklist } from "./training/TrainingChecklist";
 
-interface TrainingModule {
+interface TrainingTemplate {
   id: string;
-  title: string;
+  name: string;
   description: string;
-  role: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  duration: number; // minutes
-  completionRate: number;
-  isCompleted: boolean;
-  rating: number | null;
-  category: 'skills' | 'safety' | 'leadership' | 'customer_service';
-  prerequisites: string[];
-  lessons: Lesson[];
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  category: string;
+  role_requirements: string[];
+  estimated_duration_hours: number;
+  quiz_questions: any[];
+  certification_required: boolean;
+  is_active: boolean;
 }
 
-interface Lesson {
-  id: string;
-  title: string;
-  type: 'video' | 'quiz' | 'practical';
-  duration: number;
-  isCompleted: boolean;
-  score?: number;
-}
-
-interface UserProgress {
+interface TeamMemberProgress {
   id: string;
   name: string;
   role: string;
-  level: string;
-  completedModules: number;
-  totalModules: number;
-  overallRating: number;
+  completed_modules: number;
+  total_modules: number;
+  progress_percentage: number;
   certifications: string[];
-  nextMilestone: string;
+  next_milestone: string;
 }
 
 const TrainingPage = () => {
-  const { profile, store } = useAuth();
+  const { profile, store, user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('my-training');
   const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [trainingModules, setTrainingModules] = useState<TrainingModule[]>([]);
-  const [userProgress, setUserProgress] = useState<UserProgress[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [trainingInstances, setTrainingInstances] = useState<TrainingInstance[]>([]);
+  const [trainingTemplates, setTrainingTemplates] = useState<TrainingTemplate[]>([]);
+  const [teamProgress, setTeamProgress] = useState<TeamMemberProgress[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showChecklist, setShowChecklist] = useState(false);
+  const [selectedInstance, setSelectedInstance] = useState<TrainingInstance | null>(null);
+  const [checklistTasks, setChecklistTasks] = useState<any[]>([]);
+
+  const isLeader = profile?.role && ['shift_leader', 'manager', 'operator'].includes(profile.role);
 
   useEffect(() => {
-    loadTrainingData();
-  }, []);
+    if (profile?.store_id) {
+      loadTrainingData();
+    }
+  }, [profile?.store_id]);
 
   const loadTrainingData = async () => {
+    if (!profile?.store_id) return;
+    
     try {
-      // Mock data for demo - in production this would fetch from database
-      const mockModules: TrainingModule[] = [
-        {
-          id: '1',
-          title: 'Smoking Fundamentals',
-          description: 'Master the art of low and slow BBQ smoking',
-          role: 'pitmaster',
-          level: 'beginner',
-          duration: 45,
-          completionRate: 85,
-          isCompleted: true,
-          rating: 5,
-          category: 'skills',
-          prerequisites: [],
-          lessons: [
-            { id: '1a', title: 'Temperature Control', type: 'video', duration: 15, isCompleted: true, score: 95 },
-            { id: '1b', title: 'Wood Selection', type: 'quiz', duration: 10, isCompleted: true, score: 90 },
-            { id: '1c', title: 'Practical Smoking Test', type: 'practical', duration: 20, isCompleted: true, score: 92 }
-          ]
-        },
-        {
-          id: '2',
-          title: 'Customer Service Excellence',
-          description: 'Deliver exceptional customer experiences',
-          role: 'team_member',
-          level: 'beginner',
-          duration: 30,
-          completionRate: 60,
-          isCompleted: false,
-          rating: null,
-          category: 'customer_service',
-          prerequisites: [],
-          lessons: [
-            { id: '2a', title: 'Greeting Customers', type: 'video', duration: 10, isCompleted: true },
-            { id: '2b', title: 'Handling Complaints', type: 'video', duration: 10, isCompleted: true },
-            { id: '2c', title: 'Service Quiz', type: 'quiz', duration: 10, isCompleted: false }
-          ]
-        },
-        {
-          id: '3',
-          title: 'Advanced Sauce Crafting',
-          description: 'Create signature BBQ sauces and rubs',
-          role: 'prep_cook',
-          level: 'intermediate',
-          duration: 60,
-          completionRate: 0,
-          isCompleted: false,
-          rating: null,
-          category: 'skills',
-          prerequisites: ['Smoking Fundamentals'],
-          lessons: [
-            { id: '3a', title: 'Sauce Chemistry', type: 'video', duration: 20, isCompleted: false },
-            { id: '3b', title: 'Flavor Balancing', type: 'video', duration: 20, isCompleted: false },
-            { id: '3c', title: 'Recipe Development', type: 'practical', duration: 20, isCompleted: false }
-          ]
-        },
-        {
-          id: '4',
-          title: 'Team Leadership Basics',
-          description: 'Lead shifts and manage team performance',
-          role: 'shift_leader',
-          level: 'intermediate',
-          duration: 90,
-          completionRate: 25,
-          isCompleted: false,
-          rating: null,
-          category: 'leadership',
-          prerequisites: ['Customer Service Excellence'],
-          lessons: [
-            { id: '4a', title: 'Delegation Skills', type: 'video', duration: 30, isCompleted: true },
-            { id: '4b', title: 'Conflict Resolution', type: 'video', duration: 30, isCompleted: false },
-            { id: '4c', title: 'Performance Management', type: 'video', duration: 30, isCompleted: false }
-          ]
-        },
-        {
-          id: '5',
-          title: 'Food Safety & HACCP',
-          description: 'Critical food safety protocols and compliance',
-          role: 'all',
-          level: 'beginner',
-          duration: 40,
-          completionRate: 100,
-          isCompleted: true,
-          rating: 4,
-          category: 'safety',
-          prerequisites: [],
-          lessons: [
-            { id: '5a', title: 'Temperature Monitoring', type: 'video', duration: 15, isCompleted: true, score: 98 },
-            { id: '5b', title: 'Sanitation Procedures', type: 'video', duration: 15, isCompleted: true, score: 95 },
-            { id: '5c', title: 'Safety Assessment', type: 'quiz', duration: 10, isCompleted: true, score: 100 }
-          ]
-        }
-      ];
+      setLoading(true);
 
-      const mockUserProgress: UserProgress[] = [
-        {
-          id: '1',
-          name: 'Marcus Johnson',
-          role: 'Pitmaster',
-          level: 'Advanced',
-          completedModules: 8,
-          totalModules: 10,
-          overallRating: 4.7,
-          certifications: ['BBQ Master', 'Food Safety'],
-          nextMilestone: 'Advanced Leadership'
-        },
-        {
-          id: '2',
-          name: 'Sarah Chen',
-          role: 'Prep Cook',
-          level: 'Intermediate',
-          completedModules: 6,
-          totalModules: 8,
-          overallRating: 4.3,
-          certifications: ['Food Safety', 'Prep Specialist'],
-          nextMilestone: 'Shift Leader Training'
-        },
-        {
-          id: '3',
-          name: 'Alex Rodriguez',
-          role: 'Team Member',
-          level: 'Beginner',
-          completedModules: 2,
-          totalModules: 6,
-          overallRating: 4.0,
-          certifications: ['Food Safety'],
-          nextMilestone: 'Customer Service Certification'
-        }
-      ];
+      // Load training instances for current user
+      const { data: instancesData, error: instancesError } = await supabase
+        .from('training_instances')
+        .select(`
+          *,
+          template:training_templates!inner(
+            id, name, description, level, category, 
+            estimated_duration_hours, certification_required
+          ),
+          approver:profiles!training_instances_approved_by_fkey(
+            first_name, last_name
+          )
+        `)
+        .eq('profile_id', profile.id)
+        .order('assigned_at', { ascending: false });
 
-      setTrainingModules(mockModules);
-      setUserProgress(mockUserProgress);
+      if (instancesError) throw instancesError;
+      
+      // Type the response data correctly
+      const typedInstances: TrainingInstance[] = (instancesData || []).map((item: any) => ({
+        ...item,
+        status: item.status as TrainingInstance['status']
+      }));
+      setTrainingInstances(typedInstances);
+
+      // Load available training templates
+      const { data: templatesData, error: templatesError } = await supabase
+        .from('training_templates')
+        .select('*')
+        .eq('store_id', profile.store_id)
+        .eq('is_active', true)
+        .order('name');
+
+      if (templatesError) throw templatesError;
+      
+      // Type the templates correctly
+      const typedTemplates: TrainingTemplate[] = (templatesData || []).map((item: any) => ({
+        ...item,
+        level: item.level as TrainingTemplate['level']
+      }));
+      setTrainingTemplates(typedTemplates);
+
+      // Load team progress if user is a leader
+      if (isLeader) {
+        // First get team members
+        const { data: teamMembers, error: teamError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, role')
+          .eq('store_id', profile.store_id)
+          .neq('id', profile.id);
+
+        if (teamError) throw teamError;
+
+        // Then get their training instances separately
+        const formattedTeamProgress: TeamMemberProgress[] = [];
+        
+        for (const member of teamMembers || []) {
+          const { data: memberInstances, error: instancesError } = await supabase
+            .from('training_instances')
+            .select(`
+              id, status, progress_percentage, certification_earned,
+              template:training_templates(name, certification_required)
+            `)
+            .eq('profile_id', member.id);
+
+          if (instancesError) {
+            console.error('Error loading member instances:', instancesError);
+            continue;
+          }
+
+          const instances = memberInstances || [];
+          const completedModules = instances.filter((i: any) => i.status === 'approved').length;
+          const totalModules = instances.length;
+          const certifications = instances
+            .filter((i: any) => i.certification_earned)
+            .map((i: any) => i.template?.name)
+            .filter(Boolean);
+
+          formattedTeamProgress.push({
+            id: member.id,
+            name: `${member.first_name} ${member.last_name}`,
+            role: member.role,
+            completed_modules: completedModules,
+            total_modules: totalModules,
+            progress_percentage: totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0,
+            certifications,
+            next_milestone: getNextMilestone(member.role, instances)
+          });
+        }
+
+        setTeamProgress(formattedTeamProgress);
+      }
+
     } catch (error) {
       console.error('Error loading training data:', error);
       toast({
@@ -220,44 +196,275 @@ const TrainingPage = () => {
     }
   };
 
-  const startModule = (moduleId: string) => {
-    toast({
-      title: "Module Started",
-      description: "Opening training module...",
-    });
+  const getNextMilestone = (role: string, instances: any[]) => {
+    const roleProgression = {
+      team_member: 'Customer Service Certification',
+      prep_cook: 'Food Safety Certification',
+      pitmaster: 'Advanced Smoking Techniques',
+      shift_leader: 'Leadership Excellence',
+      manager: 'Operations Management'
+    };
+    return roleProgression[role as keyof typeof roleProgression] || 'Next Level Training';
   };
 
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'beginner': return 'bg-green-500';
-      case 'intermediate': return 'bg-yellow-500';
-      case 'advanced': return 'bg-red-500';
-      default: return 'bg-muted';
+  const handleStartTraining = async (instanceId: string) => {
+    const instance = trainingInstances.find(i => i.id === instanceId);
+    if (!instance) return;
+
+    try {
+      // Update instance status to in_progress and set started_at
+      const { error } = await supabase
+        .from('training_instances')
+        .update({ 
+          status: 'in_progress', 
+          started_at: new Date().toISOString() 
+        })
+        .eq('id', instanceId);
+
+      if (error) throw error;
+
+      // Load training checklist
+      await loadTrainingChecklist(instanceId);
+
+    } catch (error) {
+      console.error('Error starting training:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start training. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadTrainingChecklist = async (instanceId: string) => {
+    try {
+      const instance = trainingInstances.find(i => i.id === instanceId);
+      if (!instance) return;
+
+      // Load template tasks
+      const { data: templateTasks, error: templateError } = await supabase
+        .from('training_template_tasks')
+        .select('*')
+        .eq('template_id', instance.template_id)
+        .order('order_index');
+
+      if (templateError) throw templateError;
+
+      // Load or create instance tasks
+      const { data: instanceTasks, error: instanceError } = await supabase
+        .from('training_instance_tasks')
+        .select('*')
+        .eq('instance_id', instanceId);
+
+      if (instanceError) throw instanceError;
+
+      // Create instance tasks if they don't exist
+      if (instanceTasks.length === 0 && templateTasks) {
+        const tasksToInsert = templateTasks.map(task => ({
+          instance_id: instanceId,
+          template_task_id: task.id,
+          status: 'pending' as const,
+          time_spent_minutes: 0
+        }));
+
+        const { error: insertError } = await supabase
+          .from('training_instance_tasks')
+          .insert(tasksToInsert);
+
+        if (insertError) throw insertError;
+
+        // Reload instance tasks
+        const { data: newInstanceTasks, error: reloadError } = await supabase
+          .from('training_instance_tasks')
+          .select('*')
+          .eq('instance_id', instanceId);
+
+        if (reloadError) throw reloadError;
+        
+        // Combine template and instance data
+        const combinedTasks = templateTasks.map(template => {
+          const instanceTask = newInstanceTasks?.find(it => it.template_task_id === template.id);
+          return {
+            id: template.id,
+            title: template.title,
+            description: template.description,
+            estimated_minutes: template.estimated_minutes,
+            is_required: template.is_required,
+            order_index: template.order_index,
+            task_type: template.task_type,
+            task_data: template.task_data,
+            status: instanceTask?.status || 'pending',
+            completed_at: instanceTask?.completed_at,
+            time_spent_minutes: instanceTask?.time_spent_minutes || 0,
+            score: instanceTask?.score,
+            notes: instanceTask?.notes
+          };
+        });
+
+        setChecklistTasks(combinedTasks);
+      } else {
+        // Combine existing data
+        const combinedTasks = templateTasks?.map(template => {
+          const instanceTask = instanceTasks.find(it => it.template_task_id === template.id);
+          return {
+            id: template.id,
+            title: template.title,
+            description: template.description,
+            estimated_minutes: template.estimated_minutes,
+            is_required: template.is_required,
+            order_index: template.order_index,
+            task_type: template.task_type,
+            task_data: template.task_data,
+            status: instanceTask?.status || 'pending',
+            completed_at: instanceTask?.completed_at,
+            time_spent_minutes: instanceTask?.time_spent_minutes || 0,
+            score: instanceTask?.score,
+            notes: instanceTask?.notes
+          };
+        }) || [];
+
+        setChecklistTasks(combinedTasks);
+      }
+
+      setSelectedInstance(instance);
+      setShowChecklist(true);
+
+    } catch (error) {
+      console.error('Error loading training checklist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load training checklist.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRequestApproval = async () => {
+    if (!selectedInstance) return;
+
+    try {
+      const { error } = await supabase
+        .from('training_instances')
+        .update({ 
+          status: 'completed',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', selectedInstance.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Approval Requested",
+        description: "Your training completion has been submitted for approval.",
+      });
+
+      setShowChecklist(false);
+      loadTrainingData();
+
+    } catch (error) {
+      console.error('Error requesting approval:', error);
+      toast({
+        title: "Error",
+        description: "Failed to request approval. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleApproveTraining = async () => {
+    if (!selectedInstance || !profile) return;
+
+    try {
+      const { error } = await supabase
+        .from('training_instances')
+        .update({ 
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: profile.id,
+          certification_earned: selectedInstance.template.certification_required
+        })
+        .eq('id', selectedInstance.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Training Approved",
+        description: "Training has been approved and certification awarded if applicable.",
+      });
+
+      setShowChecklist(false);
+      loadTrainingData();
+
+    } catch (error) {
+      console.error('Error approving training:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve training. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const assignTemplate = async (templateId: string, profileId: string) => {
+    try {
+      const { error } = await supabase
+        .from('training_instances')
+        .insert({
+          template_id: templateId,
+          profile_id: profileId,
+          status: 'assigned',
+          assigned_by: profile?.id,
+          assigned_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Training Assigned",
+        description: "Training module has been assigned successfully.",
+      });
+
+      loadTrainingData();
+
+    } catch (error) {
+      console.error('Error assigning training:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign training. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'skills': return <ChefHat className="h-4 w-4" />;
-      case 'safety': return <Target className="h-4 w-4" />;
-      case 'leadership': return <Users className="h-4 w-4" />;
-      case 'customer_service': return <UserCheck className="h-4 w-4" />;
-      default: return <BookOpen className="h-4 w-4" />;
+    switch (category.toLowerCase()) {
+      case 'technical skills':
+        return <ChefHat className="w-4 h-4" />;
+      case 'customer service':
+        return <UserCheck className="w-4 h-4" />;
+      case 'leadership':
+        return <Users className="w-4 h-4" />;
+      case 'safety & compliance':
+        return <ShieldCheck className="w-4 h-4" />;
+      default:
+        return <BookOpen className="w-4 h-4" />;
     }
   };
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star 
-        key={i} 
-        className={`h-4 w-4 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} 
-      />
-    ));
-  };
+  const filteredTemplates = trainingTemplates.filter(template => {
+    const matchesRole = selectedRole === 'all' || 
+      template.role_requirements.includes(selectedRole) || 
+      template.role_requirements.includes('team_member');
+    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.description.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesRole && matchesSearch;
+  });
 
-  const filteredModules = trainingModules.filter(module => 
-    selectedRole === 'all' || module.role === selectedRole || module.role === 'all'
-  );
+  const filteredInstances = trainingInstances.filter(instance => {
+    const matchesSearch = instance.template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      instance.template.description.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
 
   if (loading) {
     return (
@@ -267,17 +474,42 @@ const TrainingPage = () => {
     );
   }
 
+  if (showChecklist && selectedInstance) {
+    return (
+      <div className="p-6">
+        <TrainingChecklist
+          instanceId={selectedInstance.id}
+          templateName={selectedInstance.template.name}
+          tasks={checklistTasks}
+          currentUserRole={profile?.role}
+          isLeader={isLeader || false}
+          onBack={() => setShowChecklist(false)}
+          onRequestApproval={handleRequestApproval}
+          onApprove={isLeader ? handleApproveTraining : undefined}
+          canApprove={isLeader}
+          status={selectedInstance.status}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bbq font-bold text-foreground flex items-center gap-2">
-            <GraduationCap className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+            <GraduationCap className="w-8 h-8 text-red-600" />
             SkillBuilder Training
           </h1>
           <p className="text-muted-foreground">Professional development and certification pathways</p>
         </div>
+        {isLeader && (
+          <Button className="bg-red-600 hover:bg-red-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Assign Training
+          </Button>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -290,69 +522,56 @@ const TrainingPage = () => {
 
         {/* My Training Tab */}
         <TabsContent value="my-training" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {trainingModules.filter(m => m.completionRate > 0).map((module) => (
-              <Card key={module.id} className="card-bbq">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {getCategoryIcon(module.category)}
-                      {module.title}
-                    </CardTitle>
-                    <Badge className={`${getLevelColor(module.level)} text-white`}>
-                      {module.level}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">{module.description}</p>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Progress</span>
-                      <span className="font-medium">{module.completionRate}%</span>
-                    </div>
-                    <Progress value={module.completionRate} className="h-2" />
-                    
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {module.duration}m
-                      </div>
-                      {module.rating && (
-                        <div className="flex items-center gap-1">
-                          {renderStars(module.rating)}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <Button 
-                      onClick={() => startModule(module.id)}
-                      className="w-full btn-bbq"
-                      variant={module.isCompleted ? "outline" : "default"}
-                    >
-                      {module.isCompleted ? (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Review
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          Continue
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search your training..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
+
+          {filteredInstances.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Training Assigned</h3>
+                <p className="text-muted-foreground mb-4">
+                  Contact your manager to get started with training modules.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredInstances.map((instance) => (
+                <TrainingInstanceCard
+                  key={instance.id}
+                  instance={instance}
+                  currentUserRole={profile?.role}
+                  onStart={handleStartTraining}
+                  onContinue={() => loadTrainingChecklist(instance.id)}
+                  onReview={() => loadTrainingChecklist(instance.id)}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* Browse Modules Tab */}
         <TabsContent value="browse" className="space-y-6">
           <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search modules..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
             <Select value={selectedRole} onValueChange={setSelectedRole}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by role" />
@@ -369,51 +588,61 @@ const TrainingPage = () => {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredModules.map((module) => (
-              <Card key={module.id} className="card-bbq">
+            {filteredTemplates.map((template) => (
+              <Card key={template.id} className="h-full transition-all duration-200 hover:shadow-lg">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      {getCategoryIcon(module.category)}
-                      {module.title}
+                      {getCategoryIcon(template.category)}
+                      {template.name}
                     </CardTitle>
-                    <Badge className={`${getLevelColor(module.level)} text-white`}>
-                      {module.level}
+                    <Badge variant="outline">
+                      {template.level}
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">{module.description}</p>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {template.description}
+                  </p>
                   
-                  <div className="space-y-3">
-                    {module.prerequisites.length > 0 && (
-                      <Alert>
-                        <AlertDescription className="text-xs">
-                          <strong>Prerequisites:</strong> {module.prerequisites.join(', ')}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {module.duration}m
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <BookOpen className="h-3 w-3" />
-                        {module.lessons.length} lessons
-                      </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      {template.estimated_duration_hours}h
                     </div>
-                    
-                    <Button 
-                      onClick={() => startModule(module.id)}
-                      className="w-full btn-bbq"
-                      disabled={module.prerequisites.length > 0}
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Start Module
-                    </Button>
+                    {template.certification_required && (
+                      <div className="flex items-center gap-1">
+                        <Award className="w-4 h-4" />
+                        Certified
+                      </div>
+                    )}
                   </div>
+
+                  <div className="flex flex-wrap gap-1">
+                    {template.role_requirements.map((role) => (
+                      <Badge key={role} variant="secondary" className="text-xs">
+                        {role.replace('_', ' ')}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  {isLeader && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => {
+                        // This would open a dialog to assign to team members
+                        toast({
+                          title: "Assign Training",
+                          description: "Training assignment dialog would open here.",
+                        });
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Assign to Team
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -422,71 +651,87 @@ const TrainingPage = () => {
 
         {/* Team Progress Tab */}
         <TabsContent value="team-progress" className="space-y-6">
-          {profile?.role === 'manager' || profile?.role === 'shift_leader' ? (
-            <div className="grid gap-4">
-              {userProgress.map((user) => (
-                <Card key={user.id} className="card-bbq">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div>
-                          <h3 className="font-bold text-lg">{user.name}</h3>
-                          <p className="text-sm text-muted-foreground">{user.role} • {user.level}</p>
+          {isLeader ? (
+            teamProgress.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Team Members</h3>
+                  <p className="text-muted-foreground">
+                    Team member progress will appear here once training is assigned.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {teamProgress.map((member) => (
+                  <Card key={member.id}>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <h3 className="font-bold text-lg">{member.name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {member.role.replace('_', ' ')}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-6">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-red-600">
+                              {member.completed_modules}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              of {member.total_modules} modules
+                            </div>
+                          </div>
+                          
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-green-600">
+                              {member.progress_percentage}%
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              completion
+                            </div>
+                          </div>
+                          
+                          <div className="text-center">
+                            <Badge variant="outline">{member.next_milestone}</Badge>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Next milestone
+                            </div>
+                          </div>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-6">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-primary">{user.completedModules}</div>
-                          <div className="text-xs text-muted-foreground">of {user.totalModules} modules</div>
-                        </div>
-                        
-                        <div className="text-center">
-                          <div className="flex items-center gap-1">
-                            {renderStars(Math.floor(user.overallRating))}
-                          </div>
-                          <div className="text-xs text-muted-foreground">{user.overallRating} avg rating</div>
-                        </div>
-                        
-                        <div className="text-center">
-                          <Badge variant="outline">{user.nextMilestone}</Badge>
-                          <div className="text-xs text-muted-foreground mt-1">Next milestone</div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm">Progress</span>
-                        <span className="text-sm font-medium">
-                          {Math.round((user.completedModules / user.totalModules) * 100)}%
-                        </span>
-                      </div>
-                      <Progress value={(user.completedModules / user.totalModules) * 100} className="h-2" />
-                    </div>
-                    
-                    {user.certifications.length > 0 && (
                       <div className="mt-4">
-                        <div className="text-sm text-muted-foreground mb-2">Certifications:</div>
-                        <div className="flex gap-2">
-                          {user.certifications.map((cert, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              <Award className="h-3 w-3 mr-1" />
-                              {cert}
-                            </Badge>
-                          ))}
-                        </div>
+                        <Progress value={member.progress_percentage} className="h-2" />
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      
+                      {member.certifications.length > 0 && (
+                        <div className="mt-4">
+                          <p className="text-sm font-medium mb-2">Certifications:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {member.certifications.map((cert, index) => (
+                              <Badge key={index} variant="secondary">
+                                <Award className="w-3 h-3 mr-1" />
+                                {cert}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )
           ) : (
             <Alert>
-              <Users className="h-4 w-4" />
+              <AlertCircle className="w-4 h-4" />
               <AlertDescription>
-                Team progress is only available to managers and shift leaders.
+                Only managers and shift leaders can view team progress.
               </AlertDescription>
             </Alert>
           )}
@@ -495,75 +740,45 @@ const TrainingPage = () => {
         {/* Certifications Tab */}
         <TabsContent value="certifications" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="card-bbq">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-yellow-500" />
-                  BBQ Master
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Complete mastery of all smoking techniques and meat preparation
-                </p>
-                <div className="space-y-2">
-                  <div className="text-sm">Requirements:</div>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• Complete Smoking Fundamentals</li>
-                    <li>• Complete Advanced Sauce Crafting</li>
-                    <li>• Pass practical assessment</li>
-                  </ul>
-                </div>
-                <Badge className="mt-4 bg-green-500 text-white">Earned</Badge>
-              </CardContent>
-            </Card>
-
-            <Card className="card-bbq">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-red-500" />
-                  Food Safety Certified
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Comprehensive food safety and HACCP compliance certification
-                </p>
-                <div className="space-y-2">
-                  <div className="text-sm">Requirements:</div>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• Complete Food Safety & HACCP</li>
-                    <li>• Score 90% or higher on assessment</li>
-                    <li>• Annual recertification required</li>
-                  </ul>
-                </div>
-                <Badge className="mt-4 bg-green-500 text-white">Earned</Badge>
-              </CardContent>
-            </Card>
-
-            <Card className="card-bbq">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-500" />
-                  Leadership Certificate
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Proven ability to lead teams and manage operations
-                </p>
-                <div className="space-y-2">
-                  <div className="text-sm">Requirements:</div>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• Complete Team Leadership Basics</li>
-                    <li>• Complete Advanced Leadership</li>
-                    <li>• Manage shifts for 30 days</li>
-                  </ul>
-                </div>
-                <Badge variant="outline" className="mt-4">In Progress</Badge>
-              </CardContent>
-            </Card>
+            {trainingInstances
+              .filter(instance => instance.certification_earned)
+              .map((instance) => (
+                <Card key={instance.id} className="border-green-200 bg-green-50 dark:bg-green-900/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Award className="w-5 h-5 text-green-600" />
+                      {instance.template.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Certification earned on{' '}
+                      {instance.approved_at 
+                        ? new Date(instance.approved_at).toLocaleDateString()
+                        : 'Date not available'
+                      }
+                    </p>
+                    {instance.approver && (
+                      <p className="text-xs text-muted-foreground">
+                        Approved by {instance.approver.first_name} {instance.approver.last_name}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
           </div>
+          
+          {trainingInstances.filter(instance => instance.certification_earned).length === 0 && (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Award className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Certifications Yet</h3>
+                <p className="text-muted-foreground">
+                  Complete training modules to earn certifications.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
