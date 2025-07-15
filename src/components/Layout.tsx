@@ -11,7 +11,9 @@ import {
   X,
   Flame,
   ChefHat,
-  LogOut
+  LogOut,
+  FileSpreadsheet,
+  GraduationCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +23,8 @@ const navigation = [
   { name: "Team", href: "/team", icon: Users },
   { name: "Shifts", href: "/shifts", icon: Calendar },
   { name: "Checklists", href: "/checklists", icon: ClipboardCheck },
+  { name: "Setup Sheets", href: "/setup-sheets", icon: FileSpreadsheet },
+  { name: "Training", href: "/training", icon: GraduationCap },
   { name: "Q-Cash", href: "/qcash", icon: Flame },
   { name: "Profiles", href: "/profiles", icon: User },
   { name: "Settings", href: "/settings", icon: Settings },

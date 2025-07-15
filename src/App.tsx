@@ -9,6 +9,8 @@ import Dashboard from "./components/Dashboard";
 import TeamPage from "./components/TeamPage";
 import ShiftsPage from "./components/ShiftsPage";
 import ChecklistsPage from "./components/ChecklistsPage";
+import SetupSheetsPage from "./components/SetupSheetsPage";
+import TrainingPage from "./components/TrainingPage";
 import AuthPage from "./components/auth/AuthPage";
 import OnboardingWizard from "./components/onboarding/OnboardingWizard";
 import NotFound from "./pages/NotFound";
@@ -30,6 +32,8 @@ const App = () => (
               <Route path="team" element={<TeamPage />} />
               <Route path="shifts" element={<ShiftsPage />} />
               <Route path="checklists" element={<ChecklistsPage />} />
+              <Route path="setup-sheets" element={<SetupSheetsPage />} />
+              <Route path="training" element={<TrainingPage />} />
               <Route path="qcash" element={<div className="p-6"><h1 className="text-2xl font-bold">Q-Cash - Coming Soon</h1></div>} />
               <Route path="profiles" element={<div className="p-6"><h1 className="text-2xl font-bold">Profiles - Coming Soon</h1></div>} />
               <Route path="settings" element={<div className="p-6"><h1 className="text-2xl font-bold">Settings - Coming Soon</h1></div>} />
