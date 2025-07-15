@@ -521,7 +521,7 @@ const ChecklistsPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bbq font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
             <ClipboardCheck className="h-8 w-8 text-primary" />
             Checklists
           </h1>
