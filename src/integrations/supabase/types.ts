@@ -699,6 +699,195 @@ export type Database = {
           },
         ]
       }
+      training_instance_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          instance_id: string
+          notes: string | null
+          score: number | null
+          status: string
+          template_task_id: string
+          time_spent_minutes: number | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          instance_id: string
+          notes?: string | null
+          score?: number | null
+          status?: string
+          template_task_id: string
+          time_spent_minutes?: number | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          instance_id?: string
+          notes?: string | null
+          score?: number | null
+          status?: string
+          template_task_id?: string
+          time_spent_minutes?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      training_instances: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          assigned_at: string
+          assigned_by: string | null
+          certification_earned: boolean | null
+          completed_at: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          profile_id: string
+          progress_percentage: number | null
+          score: number | null
+          started_at: string | null
+          status: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_at?: string
+          assigned_by?: string | null
+          certification_earned?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          profile_id: string
+          progress_percentage?: number | null
+          score?: number | null
+          started_at?: string | null
+          status?: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_at?: string
+          assigned_by?: string | null
+          certification_earned?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          profile_id?: string
+          progress_percentage?: number | null
+          score?: number | null
+          started_at?: string | null
+          status?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      training_template_tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          estimated_minutes: number | null
+          id: string
+          is_required: boolean | null
+          order_index: number
+          task_data: Json | null
+          task_type: string | null
+          template_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          is_required?: boolean | null
+          order_index?: number
+          task_data?: Json | null
+          task_type?: string | null
+          template_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          is_required?: boolean | null
+          order_index?: number
+          task_data?: Json | null
+          task_type?: string | null
+          template_id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      training_templates: {
+        Row: {
+          category: string
+          certification_required: boolean | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          estimated_duration_hours: number | null
+          id: string
+          is_active: boolean | null
+          level: string
+          name: string
+          quiz_questions: Json | null
+          role_requirements: string[] | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          certification_required?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimated_duration_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          level: string
+          name: string
+          quiz_questions?: Json | null
+          role_requirements?: string[] | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          certification_required?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimated_duration_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          level?: string
+          name?: string
+          quiz_questions?: Json | null
+          role_requirements?: string[] | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
