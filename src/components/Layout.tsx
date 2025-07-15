@@ -37,14 +37,43 @@ export default function Layout() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-smoke">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading your workspace...</p>
+        </div>
       </div>
     );
   }
 
-  if (!user && !profile) {
+  // If no user session, redirect to auth
+  if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // If user exists but no profile, show message to contact admin
+  if (user && !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-smoke">
+        <div className="text-center space-y-4 max-w-md mx-auto p-6">
+          <div className="flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mx-auto">
+            <Users className="h-8 w-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-semibold">Profile Setup Required</h2>
+          <p className="text-muted-foreground">
+            Your account needs to be associated with a restaurant profile. Please contact your manager or sign up to create a new restaurant.
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Button onClick={signOut} variant="outline">
+              Sign Out
+            </Button>
+            <Button onClick={() => window.location.href = '/auth'}>
+              Switch Account
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Check if user needs onboarding - check for incomplete store setup
