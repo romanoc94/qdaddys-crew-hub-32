@@ -712,6 +712,16 @@ export type Database = {
         Args: { target_store_id: string }
         Returns: boolean
       }
+      create_store_during_signup: {
+        Args: {
+          p_name: string
+          p_location: string
+          p_address?: string
+          p_phone?: string
+          p_toast_pos_id?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

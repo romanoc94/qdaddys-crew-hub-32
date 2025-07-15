@@ -152,27 +152,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Then create the profile as operator
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert([
-            {
-              user_id: data.user.id,
-              store_id: storeId,
-              first_name: firstName,
-              last_name: lastName,
-              role: 'operator',
-            }
-          ]);
+          .insert({
+            user_id: data.user.id,
+            store_id: storeId,
+            first_name: firstName,
+            last_name: lastName,
+            role: 'operator',
+          });
 
         if (profileError) throw profileError;
 
         // Create onboarding record
         const { error: onboardingError } = await supabase
           .from('store_onboarding')
-          .insert([
-            {
-              store_id: storeId,
-              step: 'store_setup'
-            }
-          ]);
+          .insert({
+            store_id: storeId,
+            step: 'store_setup'
+          });
 
         if (onboardingError) throw onboardingError;
 
