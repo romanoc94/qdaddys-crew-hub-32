@@ -123,7 +123,7 @@ const ChecklistsPage = () => {
           checklist_tasks (
             *,
             profiles:assigned_to (id, first_name, last_name, role),
-            completed_by_profile:profiles!checklist_tasks_completed_by_fkey (id, first_name, last_name, role),
+            completed_by_profile:completed_by (id, first_name, last_name, role),
             task_comments (
               *,
               profiles (id, first_name, last_name, role)
