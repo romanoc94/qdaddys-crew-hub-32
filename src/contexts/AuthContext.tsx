@@ -138,18 +138,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Create store and profile after successful signup
     if (data.user) {
       try {
-        // First create the store
-        const { data: storeData, error: storeError } = await supabase
-          .from('stores')
-          .insert([
-            {
-              name: storeName || 'My Restaurant',
-              location: 'New Location',
-              is_active: true
-            }
-          ])
-          .select()
-          .single();
+        // First create the store via RPC function
+        const { data: storeId, error: storeError } = await supabase.rpc('create_store_during_signup', {
+          p_name: storeName || 'My Restaurant',
+          p_location: 'New Location',
+          p_address: null,
+          p_phone: null,
+          p_toast_pos_id: null
+        });
 
         if (storeError) throw storeError;
 
@@ -159,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .insert([
             {
               user_id: data.user.id,
-              store_id: storeData.id,
+              store_id: storeId,
               first_name: firstName,
               last_name: lastName,
               role: 'operator',
@@ -173,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('store_onboarding')
           .insert([
             {
-              store_id: storeData.id,
+              store_id: storeId,
               step: 'store_setup'
             }
           ]);
