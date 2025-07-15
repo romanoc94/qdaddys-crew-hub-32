@@ -84,6 +84,7 @@ const ShiftsPage = () => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [availableStaff, setAvailableStaff] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showCreateShift, setShowCreateShift] = useState(false);
   const [newShift, setNewShift] = useState({
@@ -113,6 +114,7 @@ const ShiftsPage = () => {
     }
 
     try {
+      setError(null);
       console.log('Fetching shifts for store:', store.id, 'date:', selectedDate);
       
       // First get shifts without requiring assignments
@@ -152,6 +154,8 @@ const ShiftsPage = () => {
       setShifts(shiftsWithAssignments as Shift[]);
     } catch (error) {
       console.error('Error fetching shifts:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to load shifts";
+      setError(errorMessage);
       toast({
         title: "Error",
         description: "Failed to load shifts. Please check your connection and try again.",
@@ -384,6 +388,11 @@ const ShiftsPage = () => {
             className="w-auto"
           />
           
+          <Button onClick={fetchShifts} variant="outline" className="mr-2">
+            <Clock className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          
           {profile?.role && ['shift_leader', 'manager', 'operator'].includes(profile.role) && (
             <Dialog open={showCreateShift} onOpenChange={setShowCreateShift}>
               <DialogTrigger asChild>
@@ -523,9 +532,19 @@ const ShiftsPage = () => {
             </CardContent>
           </Card>
 
+          {/* Error State */}
+          {error && (
+            <Alert variant="destructive">
+              <Clock className="h-4 w-4" />
+              <AlertDescription>
+                {error}. Try refreshing the page or check your connection.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Shifts */}
           <div className="grid gap-4">
-            {shifts.length === 0 ? (
+            {shifts.length === 0 && !loading ? (
               <Alert>
                 <Flame className="h-4 w-4" />
                 <AlertDescription>

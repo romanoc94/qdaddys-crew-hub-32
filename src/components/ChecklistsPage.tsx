@@ -99,6 +99,7 @@ const ChecklistsPage = () => {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [availableStaff, setAvailableStaff] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedChecklist, setSelectedChecklist] = useState<string | null>(null);
   const [showTaskDialog, setShowTaskDialog] = useState(false);
@@ -124,6 +125,7 @@ const ChecklistsPage = () => {
     }
 
     try {
+      setError(null);
       console.log('Fetching checklists for store:', store.id, 'date:', selectedDate);
       
       const { data, error } = await supabase
@@ -165,6 +167,8 @@ const ChecklistsPage = () => {
       setChecklists(checklistsWithTasks as Checklist[]);
     } catch (error) {
       console.error('Error fetching checklists:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to load checklists";
+      setError(errorMessage);
       toast({
         title: "Error",
         description: "Failed to load checklists. Please check your connection and try again.",
@@ -454,6 +458,11 @@ const ChecklistsPage = () => {
             className="w-auto"
           />
           
+          <Button onClick={fetchChecklists} variant="outline" className="mr-2">
+            <Clock className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          
           <Button onClick={createDailyChecklists} className="btn-bbq">
             <Plus className="h-4 w-4 mr-2" />
             Create Daily Lists
@@ -509,9 +518,19 @@ const ChecklistsPage = () => {
             </CardContent>
           </Card>
 
+          {/* Error State */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {error}. Try refreshing the page or check your connection.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Checklists */}
           <div className="grid gap-4">
-            {checklists.length === 0 ? (
+            {checklists.length === 0 && !loading ? (
               <Alert>
                 <ClipboardCheck className="h-4 w-4" />
                 <AlertDescription>
