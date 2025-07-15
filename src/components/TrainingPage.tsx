@@ -90,31 +90,48 @@ const TrainingPage = () => {
     
     try {
       setLoading(true);
+      console.log('Loading training data for profile:', profile.id, 'store:', profile.store_id);
 
-      // Load training instances for current user
+      // Load training instances for current user - simplified query
       const { data: instancesData, error: instancesError } = await supabase
         .from('training_instances')
-        .select(`
-          *,
-          template:training_templates!inner(
-            id, name, description, level, category, 
-            estimated_duration_hours, certification_required
-          ),
-          approver:profiles!training_instances_approved_by_fkey(
-            first_name, last_name
-          )
-        `)
+        .select('*')
         .eq('profile_id', profile.id)
         .order('assigned_at', { ascending: false });
 
-      if (instancesError) throw instancesError;
+      if (instancesError) {
+        console.error('Error loading training instances:', instancesError);
+        throw instancesError;
+      }
+
+      console.log('Training instances loaded:', instancesData?.length || 0);
+
+      // Load templates separately for instances
+      let enrichedInstances: TrainingInstance[] = [];
+      if (instancesData && instancesData.length > 0) {
+        const templateIds = [...new Set(instancesData.map(i => i.template_id))];
+        const { data: templatesData, error: templatesError } = await supabase
+          .from('training_templates')
+          .select('*')
+          .in('id', templateIds);
+
+        if (templatesError) {
+          console.error('Error loading templates for instances:', templatesError);
+          throw templatesError;
+        }
+
+        // Enrich instances with template data
+        enrichedInstances = instancesData.map((instance: any) => {
+          const template = templatesData?.find(t => t.id === instance.template_id);
+          return {
+            ...instance,
+            template: template || { name: 'Unknown Template', description: '', level: 'Beginner' as const },
+            status: instance.status as TrainingInstance['status']
+          };
+        });
+      }
       
-      // Type the response data correctly
-      const typedInstances: TrainingInstance[] = (instancesData || []).map((item: any) => ({
-        ...item,
-        status: item.status as TrainingInstance['status']
-      }));
-      setTrainingInstances(typedInstances);
+      setTrainingInstances(enrichedInstances);
 
       // Load available training templates
       const { data: templatesData, error: templatesError } = await supabase
@@ -135,62 +152,78 @@ const TrainingPage = () => {
 
       // Load team progress if user is a leader
       if (isLeader) {
-        // First get team members
-        const { data: teamMembers, error: teamError } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, role')
-          .eq('store_id', profile.store_id)
-          .neq('id', profile.id);
+        try {
+          // First get team members
+          const { data: teamMembers, error: teamError } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, role')
+            .eq('store_id', profile.store_id)
+            .neq('id', profile.id);
 
-        if (teamError) throw teamError;
+          if (teamError) {
+            console.error('Error loading team members:', teamError);
+          } else {
+            // Then get their training instances separately
+            const formattedTeamProgress: TeamMemberProgress[] = [];
+            
+            for (const member of teamMembers || []) {
+              const { data: memberInstances, error: instancesError } = await supabase
+                .from('training_instances')
+                .select('id, status, progress_percentage, certification_earned, template_id')
+                .eq('profile_id', member.id);
 
-        // Then get their training instances separately
-        const formattedTeamProgress: TeamMemberProgress[] = [];
-        
-        for (const member of teamMembers || []) {
-          const { data: memberInstances, error: instancesError } = await supabase
-            .from('training_instances')
-            .select(`
-              id, status, progress_percentage, certification_earned,
-              template:training_templates(name, certification_required)
-            `)
-            .eq('profile_id', member.id);
+              if (instancesError) {
+                console.error('Error loading member instances:', instancesError);
+                continue;
+              }
 
-          if (instancesError) {
-            console.error('Error loading member instances:', instancesError);
-            continue;
+              const instances = memberInstances || [];
+              const completedModules = instances.filter((i: any) => i.status === 'approved').length;
+              const totalModules = instances.length;
+              
+              // Get template names for certifications
+              const certifiedInstances = instances.filter((i: any) => i.certification_earned);
+              const certifications: string[] = [];
+              
+              if (certifiedInstances.length > 0) {
+                const templateIds = certifiedInstances.map((i: any) => i.template_id);
+                const { data: certTemplates } = await supabase
+                  .from('training_templates')
+                  .select('name')
+                  .in('id', templateIds);
+                
+                certifications.push(...(certTemplates?.map(t => t.name) || []));
+              }
+
+              formattedTeamProgress.push({
+                id: member.id,
+                name: `${member.first_name} ${member.last_name}`,
+                role: member.role,
+                completed_modules: completedModules,
+                total_modules: totalModules,
+                progress_percentage: totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0,
+                certifications,
+                next_milestone: getNextMilestone(member.role, instances)
+              });
+            }
+
+            setTeamProgress(formattedTeamProgress);
           }
-
-          const instances = memberInstances || [];
-          const completedModules = instances.filter((i: any) => i.status === 'approved').length;
-          const totalModules = instances.length;
-          const certifications = instances
-            .filter((i: any) => i.certification_earned)
-            .map((i: any) => i.template?.name)
-            .filter(Boolean);
-
-          formattedTeamProgress.push({
-            id: member.id,
-            name: `${member.first_name} ${member.last_name}`,
-            role: member.role,
-            completed_modules: completedModules,
-            total_modules: totalModules,
-            progress_percentage: totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0,
-            certifications,
-            next_milestone: getNextMilestone(member.role, instances)
-          });
+        } catch (error) {
+          console.error('Error loading team progress:', error);
         }
-
-        setTeamProgress(formattedTeamProgress);
       }
 
     } catch (error) {
       console.error('Error loading training data:', error);
       toast({
         title: "Error",
-        description: "Failed to load training data",
+        description: "Failed to load training data. Please try again.",
         variant: "destructive",
       });
+      setTrainingInstances([]);
+      setTrainingTemplates([]);
+      setTeamProgress([]);
     } finally {
       setLoading(false);
     }
@@ -468,8 +501,21 @@ const TrainingPage = () => {
 
   if (loading) {
     return (
-      <div className="p-6 flex justify-center">
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground">Loading training modules...</p>
+      </div>
+    );
+  }
+
+  if (!profile || !store) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <div className="text-center">
+          <h3 className="text-lg font-medium">Setup Required</h3>
+          <p className="text-muted-foreground">Complete your profile setup to access training modules.</p>
+        </div>
       </div>
     );
   }

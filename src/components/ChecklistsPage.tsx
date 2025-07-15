@@ -128,24 +128,73 @@ const ChecklistsPage = () => {
       setError(null);
       console.log('Fetching checklists for store:', store.id, 'date:', selectedDate);
       
-      const { data, error } = await supabase
+      // Fetch checklists first
+      const { data: checklistsData, error: checklistsError } = await supabase
         .from('checklists')
-        .select(`
-          *,
-          checklist_templates (name, description, checklist_type),
-          checklist_tasks (
-            *,
-            profiles:assigned_to (id, first_name, last_name, role),
-            completed_by_profile:completed_by (id, first_name, last_name, role),
-            task_comments (
-              *,
-              profiles (id, first_name, last_name, role)
-            )
-          )
-        `)
+        .select('*')
         .eq('store_id', store.id)
         .eq('date', selectedDate)
         .order('created_at');
+
+      if (checklistsError) throw checklistsError;
+
+      if (!checklistsData || checklistsData.length === 0) {
+        setChecklists([]);
+        return;
+      }
+
+      // Fetch templates separately
+      const templateIds = [...new Set(checklistsData.map(c => c.template_id))];
+      const { data: templatesData, error: templatesError } = await supabase
+        .from('checklist_templates')
+        .select('*')
+        .in('id', templateIds);
+
+      if (templatesError) throw templatesError;
+
+      // Fetch tasks for all checklists
+      const checklistIds = checklistsData.map(c => c.id);
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('checklist_tasks')
+        .select('*')
+        .in('checklist_id', checklistIds)
+        .order('order_index');
+
+      if (tasksError) throw tasksError;
+
+      // Fetch assigned profiles
+      const assignedIds = [...new Set(tasksData?.map(t => t.assigned_to).filter(Boolean) || [])];
+      const completedByIds = [...new Set(tasksData?.map(t => t.completed_by).filter(Boolean) || [])];
+      const allProfileIds = [...new Set([...assignedIds, ...completedByIds])];
+      
+      let profilesData: any[] = [];
+      if (allProfileIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, role')
+          .in('id', allProfileIds);
+
+        if (profilesError) {
+          console.error('Error loading profiles:', profilesError);
+        } else {
+          profilesData = profiles || [];
+        }
+      }
+
+      // Fetch comments for tasks
+      const { data: commentsData, error: commentsError } = await supabase
+        .from('task_comments')
+        .select(`
+          *,
+          profiles:profile_id (id, first_name, last_name, role)
+        `)
+        .in('task_id', tasksData?.map(t => t.id) || []);
+
+      if (commentsError) {
+        console.error('Error loading comments:', commentsError);
+      }
+
+      const data = checklistsData;
 
       if (error) {
         console.error('Checklist fetch error:', error);
@@ -154,15 +203,29 @@ const ChecklistsPage = () => {
 
       console.log('Checklists fetched:', data?.length || 0);
 
-      const checklistsWithTasks = data?.map(checklist => ({
-        ...checklist,
-        tasks: (checklist.checklist_tasks || [])
-          .map((task: any) => ({
+      const checklistsWithTasks = data?.map(checklist => {
+        const template = templatesData?.find(t => t.id === checklist.template_id);
+        const checklistTasks = tasksData?.filter(t => t.checklist_id === checklist.id) || [];
+        
+        const enrichedTasks = checklistTasks.map((task: any) => {
+          const assignedProfile = profilesData.find(p => p.id === task.assigned_to);
+          const completedProfile = profilesData.find(p => p.id === task.completed_by);
+          const taskComments = commentsData?.filter(c => c.task_id === task.id) || [];
+          
+          return {
             ...task,
-            comments: task.task_comments || []
-          }))
-          .sort((a: any, b: any) => a.order_index - b.order_index)
-      })) || [];
+            profiles: assignedProfile,
+            completed_by_profile: completedProfile,
+            comments: taskComments
+          };
+        }).sort((a: any, b: any) => a.order_index - b.order_index);
+
+        return {
+          ...checklist,
+          checklist_templates: template || { name: 'Unknown Template', description: '', checklist_type: 'other' },
+          tasks: enrichedTasks
+        };
+      }) || [];
 
       setChecklists(checklistsWithTasks as Checklist[]);
     } catch (error) {
@@ -332,7 +395,7 @@ const ChecklistsPage = () => {
     try {
       const updates: any = { 
         status,
-        completed_by: profile?.user_id || null,
+        completed_by: profile?.id || null,
       };
 
       if (status === 'in_progress') {
@@ -433,6 +496,21 @@ const ChecklistsPage = () => {
         <div className="text-center">
           <h3 className="text-lg font-medium">No Store Access</h3>
           <p className="text-muted-foreground">You need to be associated with a store to view checklists.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <div className="text-center">
+          <h3 className="text-lg font-medium text-destructive">Error Loading Checklists</h3>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={fetchChecklists} variant="outline">
+            Try Again
+          </Button>
         </div>
       </div>
     );
