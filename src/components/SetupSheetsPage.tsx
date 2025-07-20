@@ -370,10 +370,34 @@ const SetupSheetsPage = () => {
 
   const currentShift = getCurrentShift();
 
+  // Group positions by area for better organization
+  const getPositionsByArea = (positions: Position[]) => {
+    const areas = {
+      'FOH Leadership': positions.filter(p => p.name.includes('Manager') || p.name.includes('Leader') || p.name.includes('Shift')),
+      'Front Counter': positions.filter(p => p.station.includes('Register') || p.station.includes('Front') || p.name.includes('Cashier')),
+      'Kitchen': positions.filter(p => p.station.includes('Kitchen') || p.station.includes('Prep') || p.name.includes('Cook') || p.name.includes('Line')),
+      'Service': positions.filter(p => p.station.includes('Dining') || p.name.includes('Runner') || p.name.includes('Expediter') || p.name.includes('Drink')),
+      'Operations': positions.filter(p => p.station.includes('Smoker') || p.name.includes('Pitmaster') || p.name.includes('Maintenance') || p.name.includes('Sanitizer') || p.name.includes('Inventory') || p.name.includes('Clean'))
+    };
+    
+    // Remove empty areas and positions already categorized
+    const categorizedPositions = new Set();
+    Object.values(areas).forEach(areaPositions => {
+      areaPositions.forEach(p => categorizedPositions.add(p.id));
+    });
+    
+    const uncategorized = positions.filter(p => !categorizedPositions.has(p.id));
+    if (uncategorized.length > 0) {
+      areas['Other'] = uncategorized;
+    }
+    
+    return Object.entries(areas).filter(([_, positions]) => positions.length > 0);
+  };
+
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 space-y-4 h-screen flex flex-col">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-3xl font-bbq font-bold text-foreground flex items-center gap-2">
             <FileSpreadsheet className="h-8 w-8 text-primary" />
@@ -396,272 +420,279 @@ const SetupSheetsPage = () => {
         </div>
       </div>
 
-      <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid gap-6 lg:grid-cols-4">
-          {/* Left Column - Compact Widgets */}
-          <div className="space-y-4">
-            {/* Weather & Environment */}
-            <Card className="card-bbq">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Cloud className="h-4 w-4 text-primary" />
-                  Weather & Environment
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{getWeatherIcon(setupSheet.weather.condition)}</span>
-                  <div>
-                    <div className="text-xl font-bold">{setupSheet.weather.temperature}°F</div>
-                    <div className="text-xs text-muted-foreground">{setupSheet.weather.condition}</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Humidity:</span>
-                    <div className="font-medium">{setupSheet.weather.humidity}%</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Traffic:</span>
-                    <div className="font-medium text-orange-600">High</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Top Widgets Row - Weather, Team Notes, Catering Orders */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
+        {/* Weather & Environment */}
+        <Card className="card-bbq">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Cloud className="h-4 w-4 text-primary" />
+              Weather & Environment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{getWeatherIcon(setupSheet.weather.condition)}</span>
+              <div>
+                <div className="text-lg font-bold">{setupSheet.weather.temperature}°F</div>
+                <div className="text-xs text-muted-foreground">{setupSheet.weather.condition}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-muted-foreground">Humidity:</span>
+                <div className="font-medium">{setupSheet.weather.humidity}%</div>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Traffic:</span>
+                <div className="font-medium text-orange-600">High</div>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">{setupSheet.expectedFootTraffic}</div>
+          </CardContent>
+        </Card>
 
-            {/* Team Notes */}
-            <Card className="card-bbq">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="h-4 w-4 text-primary" />
-                  Team Notes
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setEditingNotes(!editingNotes)}
-                    className="ml-auto h-6 px-2 text-xs"
-                  >
-                    {editingNotes ? 'Cancel' : 'Edit'}
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {editingNotes ? (
-                  <div className="space-y-2">
-                    <Textarea
-                      value={tempNotes}
-                      onChange={(e) => setTempNotes(e.target.value)}
-                      className="min-h-[60px] text-xs"
-                    />
-                    <Button onClick={updateTeamNotes} size="sm" className="text-xs">
-                      Save Notes
-                    </Button>
-                  </div>
-                ) : (
-                  <p className="text-xs">{setupSheet.teamNotes}</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+        {/* Team Notes */}
+        <Card className="card-bbq">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Users className="h-4 w-4 text-primary" />
+              Team Notes
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setEditingNotes(!editingNotes)}
+                className="ml-auto h-6 px-2 text-xs"
+              >
+                {editingNotes ? 'Cancel' : 'Edit'}
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {editingNotes ? (
+              <div className="space-y-2">
+                <Textarea
+                  value={tempNotes}
+                  onChange={(e) => setTempNotes(e.target.value)}
+                  className="min-h-[60px] text-xs"
+                />
+                <Button onClick={updateTeamNotes} size="sm" className="text-xs">
+                  Save Notes
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs leading-relaxed">{setupSheet.teamNotes}</p>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Main Shift Assignments - Takes 2 columns */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Shift Time Selector */}
-            <Card className="card-bbq">
-              <CardHeader className="pb-3">
+        {/* Catering Orders */}
+        <Card className="card-bbq">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <UtensilsCrossed className="h-4 w-4 text-primary" />
+              Catering Orders
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {setupSheet.cateringOrders.map((order) => (
+                <div key={order.id} className="border rounded-lg p-2 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-xs">{order.customerName}</h4>
+                    <Badge 
+                      variant={order.status === 'pending' ? 'secondary' : 
+                             order.status === 'in_prep' ? 'default' : 'outline'}
+                      className="text-xs"
+                    >
+                      {order.status.replace('_', ' ')}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <Clock className="h-3 w-3" />
+                    {order.deliveryTime}
+                  </div>
+                  {order.status === 'pending' && (
+                    <div className="flex items-center gap-1 text-xs text-orange-600">
+                      <AlertTriangle className="h-3 w-3" />
+                      Prep needed
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Shift Assignments Section - Expanded */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Card className="card-bbq flex-1 flex flex-col">
+            <CardHeader className="pb-3 shrink-0">
+              <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-primary" />
                   Shift Assignments
                 </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Select value={selectedShift} onValueChange={setSelectedShift}>
-                  <SelectTrigger className="w-full mb-4">
-                    <SelectValue placeholder="Select shift time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {shiftTimes.map((shift) => (
-                      <SelectItem key={shift.id} value={shift.id}>
-                        {shift.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-
-            {/* Current Shift Details */}
-            {currentShift && (
-              <Card className="card-bbq">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Select value={selectedShift} onValueChange={setSelectedShift}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Select shift time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {shiftTimes.map((shift) => (
+                        <SelectItem key={shift.id} value={shift.id}>
+                          {shift.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {currentShift && (
                     <Badge variant="secondary" className="text-sm">
-                      {currentShift.shiftType}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
                       {currentShift.startTime} - {currentShift.endTime}
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {/* Positions */}
-                    <div>
-                      <h4 className="font-medium text-sm mb-3">Positions</h4>
-                      <div className="space-y-2 max-h-96 overflow-y-auto">
-                        {currentShift.positions.map((position) => (
-                          <Droppable key={position.id} droppableId={`position-${position.id}`}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                                className={`
-                                  border-2 border-dashed rounded-lg p-3 min-h-[60px]
-                                  ${snapshot.isDraggingOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'}
-                                  ${position.assignedStaff ? 'bg-muted/30' : 'bg-background'}
-                                `}
-                              >
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="font-medium text-xs">{position.name}</span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {position.station}
-                                  </Badge>
-                                </div>
-                                {position.requiredRole && (
-                                  <div className="text-xs text-muted-foreground mb-2">
-                                    Requires: {position.requiredRole}
-                                  </div>
-                                )}
-                                
-                                {position.assignedStaff ? (
-                                  <Draggable 
-                                    draggableId={position.assignedStaff.id} 
-                                    index={0}
-                                  >
-                                    {(provided, snapshot) => (
-                                      <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        {...provided.dragHandleProps}
-                                        className={`
-                                          flex items-center gap-2 p-2 bg-primary/10 rounded text-xs
-                                          ${snapshot.isDragging ? 'shadow-lg rotate-2' : ''}
-                                        `}
-                                      >
-                                        <GripVertical className="h-3 w-3 text-muted-foreground" />
-                                        <div>
-                                          <div className="font-medium">
-                                            {position.assignedStaff.name}
-                                          </div>
-                                          <div className="text-muted-foreground">
-                                            {position.assignedStaff.role}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </Draggable>
-                                ) : (
-                                  <div className="text-xs text-muted-foreground italic">
-                                    Drag staff here to assign
-                                  </div>
-                                )}
-                                {provided.placeholder}
-                              </div>
-                            )}
-                          </Droppable>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Available Staff */}
-                    <div>
-                      <h4 className="font-medium text-sm mb-3">Available Staff</h4>
-                      <Droppable droppableId="available-staff">
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                            className={`
-                              border-2 border-dashed rounded-lg p-3 min-h-[200px] max-h-96 overflow-y-auto
-                              ${snapshot.isDraggingOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'}
-                            `}
-                          >
-                            <div className="space-y-2">
-                              {currentShift.availableStaff.map((staff, index) => (
-                                <Draggable key={staff.id} draggableId={staff.id} index={index}>
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            
+            {currentShift && (
+              <CardContent className="flex-1 flex flex-col min-h-0">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0">
+                  {/* Positions Grid - Takes 3 columns */}
+                  <div className="lg:col-span-3 flex flex-col min-h-0">
+                    <h4 className="font-medium text-sm mb-3">Position Assignments</h4>
+                    <div className="flex-1 min-h-0 overflow-auto">
+                      <div className="space-y-4">
+                        {getPositionsByArea(currentShift.positions).map(([areaName, areaPositions]) => (
+                          <div key={areaName} className="border rounded-lg p-3">
+                            <h5 className="font-medium text-sm mb-3 text-primary bg-primary/5 px-2 py-1 rounded">
+                              {areaName}
+                            </h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                              {areaPositions.map((position) => (
+                                <Droppable key={position.id} droppableId={`position-${position.id}`}>
                                   {(provided, snapshot) => (
                                     <div
                                       ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
+                                      {...provided.droppableProps}
                                       className={`
-                                        flex items-center gap-2 p-2 bg-muted/50 rounded text-xs cursor-move
-                                        ${snapshot.isDragging ? 'shadow-lg rotate-2 scale-105' : ''}
+                                        border-2 border-dashed rounded-lg p-3 min-h-[80px] transition-colors
+                                        ${snapshot.isDraggingOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'}
+                                        ${position.assignedStaff ? 'bg-muted/30' : 'bg-background'}
                                       `}
                                     >
-                                      <GripVertical className="h-3 w-3 text-muted-foreground" />
-                                      <div>
-                                        <div className="font-medium">{staff.name}</div>
-                                        <div className="text-muted-foreground">{staff.role}</div>
+                                      <div className="flex items-start justify-between mb-2">
+                                        <div className="flex-1">
+                                          <span className="font-medium text-xs block">{position.name}</span>
+                                          <Badge variant="outline" className="text-xs mt-1">
+                                            {position.station}
+                                          </Badge>
+                                        </div>
+                                        {position.requiredRole && (
+                                          <div className="text-xs text-orange-600 ml-2">
+                                            {position.requiredRole}
+                                          </div>
+                                        )}
                                       </div>
+                                      
+                                      {position.assignedStaff ? (
+                                        <Draggable 
+                                          draggableId={position.assignedStaff.id} 
+                                          index={0}
+                                        >
+                                          {(provided, snapshot) => (
+                                            <div
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              {...provided.dragHandleProps}
+                                              className={`
+                                                flex items-center gap-2 p-2 bg-primary/10 rounded text-xs
+                                                ${snapshot.isDragging ? 'shadow-lg rotate-2' : ''}
+                                              `}
+                                            >
+                                              <GripVertical className="h-3 w-3 text-muted-foreground" />
+                                              <div className="flex-1">
+                                                <div className="font-medium">
+                                                  {position.assignedStaff.name}
+                                                </div>
+                                                <div className="text-muted-foreground">
+                                                  {position.assignedStaff.role}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </Draggable>
+                                      ) : (
+                                        <div className="text-xs text-muted-foreground italic text-center py-2">
+                                          Drag staff here
+                                        </div>
+                                      )}
+                                      {provided.placeholder}
                                     </div>
                                   )}
-                                </Draggable>
+                                </Droppable>
                               ))}
-                              {currentShift.availableStaff.length === 0 && (
-                                <div className="text-xs text-muted-foreground italic text-center py-4">
-                                  All staff assigned
-                                </div>
-                              )}
                             </div>
-                            {provided.placeholder}
                           </div>
-                        )}
-                      </Droppable>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
 
-          {/* Right Column - Catering Orders */}
-          <div className="space-y-4">
-            <Card className="card-bbq">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <UtensilsCrossed className="h-4 w-4 text-primary" />
-                  Catering Orders
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {setupSheet.cateringOrders.map((order) => (
-                    <div key={order.id} className="border rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-xs">{order.customerName}</h4>
-                        <Badge 
-                          variant={order.status === 'pending' ? 'secondary' : 
-                                 order.status === 'in_prep' ? 'default' : 'outline'}
-                          className="text-xs"
+                  {/* Available Staff - Takes 1 column */}
+                  <div className="flex flex-col min-h-0">
+                    <h4 className="font-medium text-sm mb-3">Available Staff</h4>
+                    <Droppable droppableId="available-staff">
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={`
+                            border-2 border-dashed rounded-lg p-3 flex-1 min-h-0 overflow-y-auto
+                            ${snapshot.isDraggingOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/30'}
+                          `}
                         >
-                          {order.status.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{order.orderSummary}</p>
-                      <div className="flex items-center gap-2 text-xs">
-                        <Clock className="h-3 w-3" />
-                        Delivery: {order.deliveryTime}
-                      </div>
-                      <p className="text-xs font-medium text-orange-600">{order.prepRequirements}</p>
-                    </div>
-                  ))}
+                          <div className="space-y-2">
+                            {currentShift.availableStaff.map((staff, index) => (
+                              <Draggable key={staff.id} draggableId={staff.id} index={index}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={`
+                                      flex items-center gap-2 p-2 bg-muted/50 rounded text-xs cursor-move
+                                      ${snapshot.isDragging ? 'shadow-lg rotate-2 scale-105' : ''}
+                                    `}
+                                  >
+                                    <GripVertical className="h-3 w-3 text-muted-foreground" />
+                                    <div className="flex-1">
+                                      <div className="font-medium">{staff.name}</div>
+                                      <div className="text-muted-foreground">{staff.role}</div>
+                                    </div>
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {currentShift.availableStaff.length === 0 && (
+                              <div className="text-xs text-muted-foreground italic text-center py-8">
+                                All staff assigned
+                              </div>
+                            )}
+                          </div>
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </div>
                 </div>
               </CardContent>
-            </Card>
-          </div>
-        </div>
-      </DragDropContext>
+            )}
+          </Card>
+        </DragDropContext>
+      </div>
     </div>
   );
 };
