@@ -12,7 +12,10 @@ import {
   DollarSign,
   ChefHat,
   Thermometer,
-  Package
+  Package,
+  CloudSun,
+  Wind,
+  TrendingDown
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -50,6 +53,27 @@ export default function Dashboard() {
     { id: '2', name: 'Prep Checklist', progress: 30, critical: false, assignedTo: 'Sarah Chen' },
     { id: '3', name: 'Lunch Checklist', progress: 90, critical: false, assignedTo: 'Emily Davis' },
   ];
+
+  const salesAndLaborData = {
+    todaySales: 4250,
+    targetSales: 5000,
+    salesPercentage: 85,
+    laborCost: 1200,
+    laborPercentage: 28.2,
+    salesTrend: "+12%"
+  };
+
+  const weatherData = {
+    current: 78,
+    condition: "Partly Cloudy",
+    windSpeed: 8,
+    humidity: 65,
+    forecast: [
+      { time: "12 PM", temp: 82, icon: "☀️" },
+      { time: "3 PM", temp: 85, icon: "⛅" },
+      { time: "6 PM", temp: 78, icon: "🌤️" }
+    ]
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -208,6 +232,90 @@ export default function Dashboard() {
             <Button variant="outline" className="w-full mt-4">
               View All Checklists
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Sales & Labor and Weather Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sales & Labor Widget */}
+        <Card className="card-bbq">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Sales & Labor
+            </CardTitle>
+            <CardDescription>Today's performance metrics</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Today's Sales</p>
+                  <p className="text-2xl font-bold">${salesAndLaborData.todaySales.toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Target: ${salesAndLaborData.targetSales.toLocaleString()}</p>
+                  <p className="text-sm font-medium text-green-600">{salesAndLaborData.salesTrend} vs yesterday</p>
+                </div>
+              </div>
+              <Progress value={salesAndLaborData.salesPercentage} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                {salesAndLaborData.salesPercentage}% of daily target
+              </p>
+            </div>
+            
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Labor Cost</p>
+                  <p className="text-xl font-bold">${salesAndLaborData.laborCost.toLocaleString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-orange-600">{salesAndLaborData.laborPercentage}%</p>
+                  <p className="text-xs text-muted-foreground">of sales</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Weather Widget */}
+        <Card className="card-bbq">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CloudSun className="h-5 w-5" />
+              Weather
+            </CardTitle>
+            <CardDescription>Current conditions and forecast</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-3xl font-bold">{weatherData.current}°F</p>
+                <p className="text-sm text-muted-foreground">{weatherData.condition}</p>
+              </div>
+              <div className="text-right space-y-1">
+                <div className="flex items-center gap-2 text-sm">
+                  <Wind className="h-4 w-4" />
+                  <span>{weatherData.windSpeed} mph</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Humidity: {weatherData.humidity}%</p>
+              </div>
+            </div>
+            
+            <div className="border-t border-border pt-4">
+              <h4 className="font-medium text-sm mb-3">Today's Forecast</h4>
+              <div className="grid grid-cols-3 gap-2">
+                {weatherData.forecast.map((period, index) => (
+                  <div key={index} className="text-center p-2 rounded bg-muted/50">
+                    <p className="text-xs text-muted-foreground">{period.time}</p>
+                    <p className="text-lg">{period.icon}</p>
+                    <p className="text-sm font-medium">{period.temp}°</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
