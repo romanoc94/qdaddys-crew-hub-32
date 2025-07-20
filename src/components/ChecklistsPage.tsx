@@ -139,7 +139,132 @@ const ChecklistsPage = () => {
       if (checklistsError) throw checklistsError;
 
       if (!checklistsData || checklistsData.length === 0) {
-        setChecklists([]);
+        // Create mock checklists for demo
+        const mockChecklists: Checklist[] = [
+          {
+            id: 'mock-opening-1',
+            template_id: 'template-opening',
+            date: selectedDate,
+            status: 'in_progress',
+            started_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+            completed_at: null,
+            checklist_templates: {
+              name: 'Opening Setup',
+              description: 'Daily opening procedures and equipment checks',
+              checklist_type: 'opening'
+            },
+            tasks: [
+              {
+                id: 'task-1', title: 'Unlock and disarm security system', description: 'Check all entry points and disable alarm', 
+                assigned_to: 'staff-1', status: 'completed', performance_rating: 'met_expectations', estimated_minutes: 5, actual_minutes: 4, 
+                is_critical: true, order_index: 1, started_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), 
+                completed_at: new Date(Date.now() - 115 * 60 * 1000).toISOString(), completed_by: 'staff-1',
+                profiles: { id: 'staff-1', first_name: 'Marcus', last_name: 'Johnson', role: 'Manager' },
+                completed_by_profile: { id: 'staff-1', first_name: 'Marcus', last_name: 'Johnson', role: 'Manager' },
+                comments: []
+              },
+              {
+                id: 'task-2', title: 'Start main smoker and check temps', description: 'Light main smoker, achieve 225°F target temp', 
+                assigned_to: 'staff-2', status: 'completed', performance_rating: 'exceeded_expectations', estimated_minutes: 15, actual_minutes: 12, 
+                is_critical: true, order_index: 2, started_at: new Date(Date.now() - 110 * 60 * 1000).toISOString(), 
+                completed_at: new Date(Date.now() - 98 * 60 * 1000).toISOString(), completed_by: 'staff-2',
+                profiles: { id: 'staff-2', first_name: 'Sarah', last_name: 'Chen', role: 'Pitmaster' },
+                completed_by_profile: { id: 'staff-2', first_name: 'Sarah', last_name: 'Chen', role: 'Pitmaster' },
+                comments: []
+              },
+              {
+                id: 'task-3', title: 'Check refrigeration temps', description: 'Walk-in cooler should be 35-38°F, freezer 0°F', 
+                assigned_to: 'staff-3', status: 'in_progress', performance_rating: null, estimated_minutes: 10, actual_minutes: null, 
+                is_critical: true, order_index: 3, started_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(), 
+                completed_at: null, completed_by: null,
+                profiles: { id: 'staff-3', first_name: 'Mike', last_name: 'Torres', role: 'Team Member' },
+                completed_by_profile: undefined,
+                comments: []
+              },
+              {
+                id: 'task-4', title: 'Stock prep station with supplies', description: 'Restock cutting boards, knives, containers', 
+                assigned_to: null, status: 'pending', performance_rating: null, estimated_minutes: 20, actual_minutes: null, 
+                is_critical: false, order_index: 4, started_at: null, completed_at: null, completed_by: null,
+                profiles: undefined, completed_by_profile: undefined, comments: []
+              },
+              {
+                id: 'task-5', title: 'Set up POS system and test registers', description: 'Boot up all registers and run test transactions', 
+                assigned_to: null, status: 'pending', performance_rating: null, estimated_minutes: 8, actual_minutes: null, 
+                is_critical: true, order_index: 5, started_at: null, completed_at: null, completed_by: null,
+                profiles: undefined, completed_by_profile: undefined, comments: []
+              }
+            ]
+          },
+          {
+            id: 'mock-prep-1',
+            template_id: 'template-prep',
+            date: selectedDate,
+            status: 'pending',
+            started_at: null,
+            completed_at: null,
+            checklist_templates: {
+              name: 'Kitchen Prep',
+              description: 'Daily food preparation checklist',
+              checklist_type: 'prep'
+            },
+            tasks: [
+              {
+                id: 'task-6', title: 'Prep brisket for smoking (12-hour cook)', description: 'Trim fat, apply rub, ready for smoker', 
+                assigned_to: 'staff-2', status: 'pending', performance_rating: null, estimated_minutes: 45, actual_minutes: null, 
+                is_critical: true, order_index: 1, started_at: null, completed_at: null, completed_by: null,
+                profiles: { id: 'staff-2', first_name: 'Sarah', last_name: 'Chen', role: 'Pitmaster' },
+                completed_by_profile: undefined, comments: []
+              },
+              {
+                id: 'task-7', title: 'Slice onions and pickle prep', description: 'Slice 5 lbs onions, prep pickle garnish', 
+                assigned_to: null, status: 'pending', performance_rating: null, estimated_minutes: 30, actual_minutes: null, 
+                is_critical: false, order_index: 2, started_at: null, completed_at: null, completed_by: null,
+                profiles: undefined, completed_by_profile: undefined, comments: []
+              },
+              {
+                id: 'task-8', title: 'Mix sauce batches (spicy & mild)', description: 'Prepare 2 gallons each of house sauces', 
+                assigned_to: null, status: 'pending', performance_rating: null, estimated_minutes: 25, actual_minutes: null, 
+                is_critical: false, order_index: 3, started_at: null, completed_at: null, completed_by: null,
+                profiles: undefined, completed_by_profile: undefined, comments: []
+              }
+            ]
+          },
+          {
+            id: 'mock-closing-1',
+            template_id: 'template-closing',
+            date: selectedDate,
+            status: 'pending',
+            started_at: null,
+            completed_at: null,
+            checklist_templates: {
+              name: 'Closing Procedures',
+              description: 'End-of-day closing and cleaning tasks',
+              checklist_type: 'closing'
+            },
+            tasks: [
+              {
+                id: 'task-9', title: 'Clean and sanitize smokers', description: 'Deep clean smoker interior, check fire safety', 
+                assigned_to: null, status: 'pending', performance_rating: null, estimated_minutes: 30, actual_minutes: null, 
+                is_critical: true, order_index: 1, started_at: null, completed_at: null, completed_by: null,
+                profiles: undefined, completed_by_profile: undefined, comments: []
+              },
+              {
+                id: 'task-10', title: 'Complete register close-out', description: 'Count drawers, run end-of-day reports', 
+                assigned_to: null, status: 'pending', performance_rating: null, estimated_minutes: 15, actual_minutes: null, 
+                is_critical: true, order_index: 2, started_at: null, completed_at: null, completed_by: null,
+                profiles: undefined, completed_by_profile: undefined, comments: []
+              },
+              {
+                id: 'task-11', title: 'Secure facility and set alarm', description: 'Lock all doors, arm security system', 
+                assigned_to: null, status: 'pending', performance_rating: null, estimated_minutes: 5, actual_minutes: null, 
+                is_critical: true, order_index: 3, started_at: null, completed_at: null, completed_by: null,
+                profiles: undefined, completed_by_profile: undefined, comments: []
+              }
+            ]
+          }
+        ];
+        
+        setChecklists(mockChecklists);
         return;
       }
 
