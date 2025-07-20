@@ -148,7 +148,137 @@ const TrainingPage = () => {
         ...item,
         level: item.level as TrainingTemplate['level']
       }));
-      setTrainingTemplates(typedTemplates);
+
+      // Add demo data if no templates exist
+      if (typedTemplates.length === 0) {
+        const demoTemplates: TrainingTemplate[] = [
+          {
+            id: 'demo-1',
+            name: 'Customer Service Excellence',
+            description: 'Master the art of exceptional customer service and build lasting relationships with every guest.',
+            level: 'Beginner',
+            category: 'Customer Service',
+            role_requirements: ['team_member', 'prep_cook'],
+            estimated_duration_hours: 2,
+            quiz_questions: [],
+            certification_required: true,
+            is_active: true,
+          },
+          {
+            id: 'demo-2',
+            name: 'Food Safety Fundamentals',
+            description: 'Essential food safety protocols, HACCP principles, and health department compliance.',
+            level: 'Beginner',
+            category: 'Safety & Compliance',
+            role_requirements: ['team_member', 'prep_cook', 'pitmaster'],
+            estimated_duration_hours: 3,
+            quiz_questions: [],
+            certification_required: true,
+            is_active: true,
+          },
+          {
+            id: 'demo-3',
+            name: 'BBQ Smoking Techniques',
+            description: 'Advanced smoking methods, temperature control, and meat preparation for perfect BBQ.',
+            level: 'Advanced',
+            category: 'Technical Skills',
+            role_requirements: ['pitmaster'],
+            estimated_duration_hours: 6,
+            quiz_questions: [],
+            certification_required: true,
+            is_active: true,
+          },
+          {
+            id: 'demo-4',
+            name: 'Leadership & Team Management',
+            description: 'Develop leadership skills, team building, and effective communication strategies.',
+            level: 'Intermediate',
+            category: 'Leadership',
+            role_requirements: ['shift_leader', 'manager'],
+            estimated_duration_hours: 4,
+            quiz_questions: [],
+            certification_required: true,
+            is_active: true,
+          },
+          {
+            id: 'demo-5',
+            name: 'Point of Sale System Mastery',
+            description: 'Complete training on Toast POS system features, troubleshooting, and daily operations.',
+            level: 'Beginner',
+            category: 'Technical Skills',
+            role_requirements: ['team_member', 'shift_leader'],
+            estimated_duration_hours: 1.5,
+            quiz_questions: [],
+            certification_required: false,
+            is_active: true,
+          },
+          {
+            id: 'demo-6',
+            name: 'Opening & Closing Procedures',
+            description: 'Step-by-step procedures for restaurant opening and closing, including safety checks.',
+            level: 'Intermediate',
+            category: 'Technical Skills',
+            role_requirements: ['shift_leader', 'manager'],
+            estimated_duration_hours: 2.5,
+            quiz_questions: [],
+            certification_required: false,
+            is_active: true,
+          }
+        ];
+        setTrainingTemplates(demoTemplates);
+
+        // Add demo training instances for the current user
+        const demoInstances: TrainingInstance[] = [
+          {
+            id: 'demo-instance-1',
+            template_id: 'demo-1',
+            profile_id: profile.id,
+            status: 'assigned',
+            progress_percentage: 0,
+            assigned_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+            started_at: undefined,
+            completed_at: undefined,
+            approved_at: undefined,
+            approved_by: undefined,
+            certification_earned: false,
+            expires_at: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString(), // 28 days from now
+            template: demoTemplates[0]
+          },
+          {
+            id: 'demo-instance-2',
+            template_id: 'demo-2',
+            profile_id: profile.id,
+            status: 'in_progress',
+            progress_percentage: 65,
+            assigned_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+            started_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+            completed_at: undefined,
+            approved_at: undefined,
+            approved_by: undefined,
+            certification_earned: false,
+            expires_at: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString(), // 25 days from now
+            template: demoTemplates[1]
+          },
+          {
+            id: 'demo-instance-3',
+            template_id: 'demo-5',
+            profile_id: profile.id,
+            status: 'approved',
+            progress_percentage: 100,
+            assigned_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
+            started_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), // 8 days ago
+            completed_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
+            approved_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+            approved_by: 'demo-manager',
+            certification_earned: false,
+            expires_at: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(), // 20 days from now
+            template: demoTemplates[4]
+          }
+        ];
+        setTrainingInstances(demoInstances);
+      } else {
+        setTrainingTemplates(typedTemplates);
+      }
 
       // Load team progress if user is a leader
       if (isLeader) {
@@ -207,10 +337,83 @@ const TrainingPage = () => {
               });
             }
 
-            setTeamProgress(formattedTeamProgress);
+            // Add demo team progress data if no team members found
+            if (formattedTeamProgress.length === 0 && typedTemplates.length === 0) {
+              const demoTeamProgress: TeamMemberProgress[] = [
+                {
+                  id: 'demo-team-1',
+                  name: 'Alex Johnson',
+                  role: 'prep_cook',
+                  completed_modules: 3,
+                  total_modules: 5,
+                  progress_percentage: 60,
+                  certifications: ['Food Safety Fundamentals', 'Customer Service Excellence'],
+                  next_milestone: 'Food Safety Certification'
+                },
+                {
+                  id: 'demo-team-2',
+                  name: 'Maria Garcia',
+                  role: 'team_member',
+                  completed_modules: 2,
+                  total_modules: 4,
+                  progress_percentage: 50,
+                  certifications: ['Customer Service Excellence'],
+                  next_milestone: 'Customer Service Certification'
+                },
+                {
+                  id: 'demo-team-3',
+                  name: 'Tommy Chen',
+                  role: 'pitmaster',
+                  completed_modules: 4,
+                  total_modules: 6,
+                  progress_percentage: 67,
+                  certifications: ['Food Safety Fundamentals', 'BBQ Smoking Techniques'],
+                  next_milestone: 'Advanced Smoking Techniques'
+                },
+                {
+                  id: 'demo-team-4',
+                  name: 'Sarah Wilson',
+                  role: 'shift_leader',
+                  completed_modules: 5,
+                  total_modules: 7,
+                  progress_percentage: 71,
+                  certifications: ['Customer Service Excellence', 'Leadership & Team Management', 'Point of Sale System Mastery'],
+                  next_milestone: 'Leadership Excellence'
+                }
+              ];
+              setTeamProgress(demoTeamProgress);
+            } else {
+              setTeamProgress(formattedTeamProgress);
+            }
           }
         } catch (error) {
           console.error('Error loading team progress:', error);
+          // Set demo data on error too
+          if (typedTemplates.length === 0) {
+            const demoTeamProgress: TeamMemberProgress[] = [
+              {
+                id: 'demo-team-1',
+                name: 'Alex Johnson',
+                role: 'prep_cook',
+                completed_modules: 3,
+                total_modules: 5,
+                progress_percentage: 60,
+                certifications: ['Food Safety Fundamentals', 'Customer Service Excellence'],
+                next_milestone: 'Food Safety Certification'
+              },
+              {
+                id: 'demo-team-2',
+                name: 'Maria Garcia',
+                role: 'team_member',
+                completed_modules: 2,
+                total_modules: 4,
+                progress_percentage: 50,
+                certifications: ['Customer Service Excellence'],
+                next_milestone: 'Customer Service Certification'
+              }
+            ];
+            setTeamProgress(demoTeamProgress);
+          }
         }
       }
 
